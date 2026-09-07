@@ -1,0 +1,28 @@
+# Configuración del analizador estático.
+#
+# Sobre `flutter_lints` se añaden reglas orientadas al RENDIMIENTO, que es lo
+# que más importa en esta app: corre en el navegador de un móvil, y cada
+# reconstrucción evitable se paga en batería.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Un widget `const` se construye una vez y Flutter lo salta en las
+    # reconstrucciones siguientes. En una lista que se repinta al desplazarse,
+    # la diferencia se nota.
+    - prefer_const_constructors
+    - prefer_const_constructors_in_immutables
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+
+    # Envolturas que solo añaden un nodo al árbol.
+    - avoid_unnecessary_containers
+    - sized_box_for_whitespace
+
+    # Un cierre que solo llama a otra función crea un objeto por construcción.
+    - unnecessary_lambdas
+
+    # Código muerto y ruido.
+    - unnecessary_parenthesis
+    - unnecessary_null_checks
+    - avoid_redundant_argument_values

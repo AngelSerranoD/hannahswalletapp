@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  La app se excluye por completo de las copias de Android (Auto Backup y
+  transferencia entre dispositivos).
+
+  Dos razones, y ninguna es paranoia:
+
+  1. La clave AES vive en el Keystore, que NO se puede respaldar. Restaurar el
+     fichero .db en otro movil dejaria una base cifrada sin su clave: bytes
+     ilegibles y un error al arrancar, con el usuario creyendo que ha
+     recuperado sus datos.
+
+  2. Aunque el fichero este cifrado, subirlo a Drive contradice la premisa de
+     la app: los datos no salen del dispositivo salvo que el usuario exporte
+     una copia a mano.
+
+  Para cambiar de movil se usa Ajustes > Exportar copia (JSON).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

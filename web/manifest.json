@@ -1,0 +1,46 @@
+{
+    "name": "Hannah's Wallet",
+    "short_name": "Hannah's",
+    "start_url": ".",
+    "scope": ".",
+    "display": "standalone",
+    "display_override": [
+        "standalone",
+        "minimal-ui"
+    ],
+    "background_color": "#F7F4D5",
+    "theme_color": "#0A3323",
+    "description": "Control de gastos, ingresos y presupuestos. Cifrado en tu dispositivo y sin servidor.",
+    "lang": "es-ES",
+    "dir": "ltr",
+    "orientation": "portrait",
+    "categories": [
+        "finance",
+        "productivity"
+    ],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

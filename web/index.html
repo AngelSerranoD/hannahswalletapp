@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!--
+    Ruta base. `flutter build web` la sustituye por el valor de `--base-href`.
+    Si la app se sirve en un subdirectorio (por ejemplo GitHub Pages), hay que
+    compilar con `--base-href "/nombre-del-repo/"` o la PWA no encontrara sus
+    propios ficheros.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description"
+        content="Control de gastos, ingresos y presupuestos. Cifrado y sin servidor.">
+
+  <!--
+    `viewport-fit=cover` extiende la pagina bajo el notch y la barra inferior
+    del iPhone; Flutter respeta las areas seguras con SafeArea.
+    `user-scalable=no` evita el zoom accidental al tocar dos veces un importe,
+    que en un formulario de dinero es una molestia constante.
+  -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
+                 user-scalable=no, viewport-fit=cover">
+
+  <!--
+    Politica de seguridad de contenido.
+
+    La linea que mas importa es `connect-src 'self'`: prohibe al navegador
+    abrir cualquier conexion fuera de este origen. Es lo que convierte el
+    "100 % offline, sin telemetria" en algo verificable y IMPUESTO por el
+    navegador, en vez de una promesa. Si una dependencia intentara enviar
+    datos a un servidor, Safari lo bloquearia.
+
+    `frame-ancestors` no funciona en <meta> y solo se aplica por cabecera
+    HTTP: esta en `_headers`, junto al resto de cabeceras del hosting.
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' 'wasm-unsafe-eval';
+                 style-src 'self' 'unsafe-inline';
+                 img-src 'self' data: blob:;
+                 font-src 'self' data:;
+                 connect-src 'self';
+                 worker-src 'self' blob:;
+                 manifest-src 'self';
+                 base-uri 'self';
+                 form-action 'none';
+                 object-src 'none'">
+
+  <!--
+    Color de la barra del navegador. Uno solo, sin variante oscura: la app
+    tiene un unico tema y debe verse igual tenga el sistema el modo que tenga.
+  -->
+  <meta name="theme-color" content="#F7F4D5">
+
+  <!-- ============ iOS: instalacion en la pantalla de inicio ============ -->
+  <!--
+    Sin estas dos etiquetas, tocar "Anadir a pantalla de inicio" crearia un
+    simple marcador que abre Safari con su barra de direcciones. Con ellas, la
+    app se abre a pantalla completa y con su propio historial.
+  -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Hannah&apos;s Wallet">
+
+  <!-- iOS ignora los iconos del manifest: usa solo estos. -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icons/apple-touch-icon-167.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon-120.png">
+
+  <!-- Pantallas de arranque por resolucion exacta de dispositivo. -->
+  <link rel="apple-touch-startup-image" href="splash/splash-1320x2868.png"
+        media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1206x2622.png"
+        media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1290x2796.png"
+        media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1179x2556.png"
+        media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1284x2778.png"
+        media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1170x2532.png"
+        media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1125x2436.png"
+        media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1242x2688.png"
+        media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-828x1792.png"
+        media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1242x2208.png"
+        media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="splash/splash-750x1334.png"
+        media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1640x2360.png"
+        media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2)">
+  <link rel="apple-touch-startup-image" href="splash/splash-1536x2048.png"
+        media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>Hannah&apos;s Wallet</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overscroll-behavior: none;
+      background-color: #F7F4D5;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /*
+      Pantalla de carga en HTML puro.
+
+      Flutter web tarda un par de segundos en descargar y arrancar su motor, y
+      durante ese rato el lienzo esta vacio. En una app instalada esa espera en
+      blanco parece que la aplicacion se ha roto, asi que se muestra el icono
+      desde el primer byte de HTML y se retira cuando Flutter toma el control.
+    */
+    #boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      background-color: #F7F4D5;
+      transition: opacity 350ms ease-out;
+      z-index: 9999;
+    }
+    #boot.hidden { opacity: 0; pointer-events: none; }
+    #boot img {
+      width: 108px;
+      height: 108px;
+      border-radius: 30px;
+      animation: breathe 2.4s ease-in-out infinite;
+    }
+    #boot .name {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #0A3323;
+    }
+    #boot .bar {
+      width: 130px;
+      height: 4px;
+      border-radius: 4px;
+      background-color: rgba(10, 51, 35, 0.20);
+      overflow: hidden;
+    }
+    #boot .bar span {
+      display: block;
+      width: 40%;
+      height: 100%;
+      border-radius: 4px;
+      background-color: #0A3323;
+      animation: slide 1.3s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.05); }
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(325%); }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <img src="icons/Icon-192.png" alt="">
+    <div class="name">Hannah&apos;s Wallet</div>
+    <div class="bar"><span></span></div>
+  </div>
+
+  <script src="boot.js"></script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

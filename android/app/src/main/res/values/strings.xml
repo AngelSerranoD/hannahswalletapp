@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- El apostrofe va escapado: en los recursos de Android un ' sin escapar
+         es un error de compilacion de aapt. -->
+    <string name="app_name">Hannah\'s Wallet</string>
+</resources>

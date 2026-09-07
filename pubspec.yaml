@@ -1,0 +1,120 @@
+name: hannahswalletapp
+description: "Hannah's Wallet — control de gastos, ingresos y presupuestos, 100% offline y cifrado."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # --- Estado / Inyección de dependencias ---
+  flutter_riverpod: ^2.6.1
+
+  # --- Persistencia cifrada (offline-first) ---
+  sqflite_sqlcipher: ^3.4.1
+  flutter_secure_storage: ^11.0.0
+  cryptography: ^2.9.0
+  path_provider: ^2.1.6
+  path: ^1.9.1
+
+  # --- Bloqueo biométrico / PIN ---
+  local_auth: ^3.0.2
+
+  # --- Mascota interactiva + gráficas ---
+  lottie: ^3.3.3
+  fl_chart: ^1.2.0
+
+  # --- Portabilidad de datos (import/export JSON) ---
+  share_plus: ^13.3.0
+  file_picker: ^12.0.0
+
+  # --- Utilidades ---
+  intl: ^0.20.2
+  equatable: ^2.1.0
+  idb_shim: ^2.9.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icon/
+    # La fuente china va como ASSET y NO en la sección `fonts:` de abajo, a
+    # propósito: todo lo declarado ahí se descarga al arrancar, y son 8,3 MB
+    # que quien escriba solo en español no necesita. Se carga sola en segundo
+    # plano tras el primer frame (ver `CjkFontLoader`).
+    - assets/fonts/NotoSansSC-Regular.otf
+
+  # Las fuentes viajan EMPAQUETADAS a propósito.
+  #
+  # Flutter web con CanvasKit necesita el fichero para dibujar texto y, si no
+  # lo encuentra en el bundle, lo descarga de fonts.gstatic.com en cada
+  # arranque. Eso son dos cosas inaceptables aquí: una petición a Google -con
+  # IP y User-Agent- desde una app que promete no hablar con nadie, y una
+  # pantalla sin texto si no hay conexión.
+  #
+  # Las dos familias son SIL OFL: se pueden incrustar en una app sin
+  # restricciones, a diferencia de Coolvetica y CandleScript, que estuvieron
+  # aquí antes y cuyas licencias gratuitas excluyen justamente este uso.
+  fonts:
+    # Cuerpo: Archivo, la grotesca más cercana a Coolvetica en compacidad y
+    # peso. Tres instancias estáticas generadas desde la variable original
+    # (`tool/prepare_fonts.py`) para no depender del soporte de fuentes
+    # variables de cada motor.
+    - family: Archivo
+      fonts:
+        - asset: assets/fonts/Archivo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Archivo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Archivo-Bold.ttf
+          weight: 700
+
+    # Títulos: Pinyon Script. Cubre el latino completo -tildes, eñe, cifras y
+    # el símbolo del euro-, así que se puede usar en CUALQUIER título sin que
+    # aparezcan caracteres rotos.
+    - family: PinyonScript
+      fonts:
+        - asset: assets/fonts/PinyonScript-Regular.ttf
+
+    # "Roboto" apuntando a los ficheros de Archivo. No es un descuido.
+    #
+    # El motor de Flutter web usa Roboto como fuente por defecto y, si no
+    # encuentra una familia con ese nombre registrada, la pide a
+    # fonts.gstatic.com en CADA arranque. La CSP bloquea esa peticion, asi que
+    # no hay fuga, pero queda un error en consola y cualquier widget de
+    # Material que no herede el tema se quedaria sin fuente.
+    #
+    # Declarando el alias, el motor la encuentra en local, no sale a la red, y
+    # lo que se ve es Archivo. No anade un solo byte: son los mismos ficheros.
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Archivo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Archivo-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Archivo-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#F7F4D5"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#F7F4D5"
+    theme_color: "#0A3323"
