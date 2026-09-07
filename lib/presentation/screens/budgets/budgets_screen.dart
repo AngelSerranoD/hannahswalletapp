@@ -38,6 +38,13 @@ class BudgetsScreen extends ConsumerWidget {
       body: Column(
         children: <Widget>[
           _MonthNavigator(range: range),
+          if (progress.valueOrNull case final List<BudgetProgress> budgets
+              when budgets.isNotEmpty)
+            _AllocationHeader(
+              allocation: BudgetAllocation.from(budgets),
+              currency: currency,
+              onSetTotal: () => _openEditor(context, ref, month: month),
+            ),
           Expanded(
             child: switch (progress) {
               AsyncData<List<BudgetProgress>>(:final List<BudgetProgress> value)
@@ -162,6 +169,154 @@ class _MonthNavigator extends ConsumerWidget {
   }
 }
 
+/// Cabecera con el dinero total del mes y lo que queda libre para repartir.
+///
+/// El límite global es la bolsa del mes; cada límite por categoría saca una
+/// parte de ella. Sin este resumen había que sumar las tarjetas a mano para
+/// saber si todavía cabía otra categoría, que es justo la pregunta que se hace
+/// al pulsar "Nuevo límite".
+class _AllocationHeader extends StatelessWidget {
+  const _AllocationHeader({
+    required this.allocation,
+    required this.currency,
+    required this.onSetTotal,
+  });
+
+  final BudgetAllocation allocation;
+  final String currency;
+  final VoidCallback onSetTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    if (!allocation.hasGlobalBudget) {
+      return _Frame(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                const Icon(Icons.savings_outlined, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Aún no has puesto el total del mes',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Las categorías reparten ya '
+              '${Money.format(allocation.assignedCents, currencyCode: currency)}. '
+              'Pon un límite de "Todo el mes" y verás cuánto te queda libre '
+              'cada vez que añadas una.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onSetTotal,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Poner el total'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final bool over = allocation.isOverAllocated;
+    final int available = allocation.availableCents;
+
+    return _Frame(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            over ? 'Te has pasado del total' : 'Libre para nuevas categorías',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: over ? AppColors.danger : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  Money.format(
+                    over ? -available : available,
+                    currencyCode: currency,
+                  ),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: over ? AppColors.danger : null,
+                  ),
+                ),
+              ),
+              Text(
+                'de ${Money.format(allocation.totalCents, currencyCode: currency)}',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ProgressBar(ratio: allocation.ratio),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  _detail(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: over ? AppColors.danger : null,
+                  ),
+                ),
+              ),
+              Text(
+                '${allocation.percent} %',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: ProgressBar.colorFor(allocation.ratio),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _detail() {
+    final String assigned =
+        Money.format(allocation.assignedCents, currencyCode: currency);
+    if (allocation.categoryCount == 0) {
+      return 'Todavía no has repartido nada por categorías.';
+    }
+    final String categories = allocation.categoryCount == 1
+        ? '1 categoría'
+        : '${allocation.categoryCount} categorías';
+    return 'Repartido en $categories: $assigned';
+  }
+}
+
+/// Marco común de la cabecera: tarjeta destacada sobre la lista.
+class _Frame extends StatelessWidget {
+  const _Frame({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+      child: SoftCard(color: AppColors.surfaceAlt, child: child),
+    );
+  }
+}
+
 /// Tarjeta de un presupuesto con su barra de consumo.
 class _BudgetCard extends StatelessWidget {
   const _BudgetCard({
@@ -267,6 +422,101 @@ class _BudgetCard extends StatelessWidget {
   }
 }
 
+/// Cuánto quedará libre del total del mes si se guarda el importe escrito.
+///
+/// Va debajo del campo del importe y se actualiza tecleando, que es donde la
+/// cuenta sirve: decidir el número, no descubrir después de guardar que el
+/// reparto ya no cabe.
+class _AvailableHint extends StatelessWidget {
+  const _AvailableHint({
+    required this.allocation,
+    required this.currency,
+    required this.existing,
+    required this.forCategory,
+    required this.typedCents,
+  });
+
+  final BudgetAllocation allocation;
+  final String currency;
+  final BudgetEntity? existing;
+  final bool forCategory;
+  final int typedCents;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    if (!forCategory) {
+      // Editando el total: lo repartido no cambia, cambia la bolsa.
+      final int rest = typedCents - allocation.assignedCents;
+      final bool short = rest < 0;
+      return _line(
+        theme,
+        icon: Icons.account_balance_wallet_outlined,
+        danger: short,
+        text: allocation.categoryCount == 0
+            ? 'Es el dinero total del mes; las categorías se repartirán dentro de él.'
+            : short
+                ? 'Tus categorías ya reparten '
+                    '${Money.format(allocation.assignedCents, currencyCode: currency)}: '
+                    'te faltarían ${Money.format(-rest, currencyCode: currency)}.'
+                : 'Quitando lo repartido en categorías '
+                    '(${Money.format(allocation.assignedCents, currencyCode: currency)}), '
+                    'quedarían ${Money.format(rest, currencyCode: currency)} libres.',
+      );
+    }
+
+    if (!allocation.hasGlobalBudget) {
+      return _line(
+        theme,
+        icon: Icons.info_outline_rounded,
+        danger: false,
+        text: 'Sin un límite de "Todo el mes" no hay total del que descontar '
+            'este límite.',
+      );
+    }
+
+    final int available = allocation.availableForEditing(existing);
+    final int rest = available - typedCents;
+    final bool over = rest < 0;
+
+    return _line(
+      theme,
+      icon: Icons.savings_outlined,
+      danger: over,
+      text: over
+          ? 'Libre: ${Money.format(available, currencyCode: currency)}. '
+              'Con este límite te pasarías '
+              '${Money.format(-rest, currencyCode: currency)} del total.'
+          : 'Libre: ${Money.format(available, currencyCode: currency)}. '
+              'Con este límite quedarían '
+              '${Money.format(rest, currencyCode: currency)}.',
+    );
+  }
+
+  Widget _line(
+    ThemeData theme, {
+    required IconData icon,
+    required bool danger,
+    required String text,
+  }) {
+    final Color color = danger ? AppColors.danger : AppColors.textSecondary;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Hoja para crear o editar un presupuesto.
 class BudgetEditorSheet extends ConsumerStatefulWidget {
   const BudgetEditorSheet({required this.month, this.existing, super.key});
@@ -309,6 +559,10 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
     final List<CategoryEntity> categories =
         ref.watch(categoriesProvider(TransactionType.expense)).valueOrNull ??
             const <CategoryEntity>[];
+    final BudgetAllocation allocation = BudgetAllocation.from(
+      ref.watch(budgetProgressProvider(widget.month)).valueOrNull ??
+          const <BudgetProgress>[],
+    );
 
     return Padding(
       padding: EdgeInsets.only(
@@ -338,7 +592,21 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
                 suffixText: Money.symbolFor(currency),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+            // Se reconstruye con cada tecla: el objetivo es ver bajar el
+            // disponible mientras se escribe, no al guardar.
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _limit,
+              builder: (BuildContext context, TextEditingValue value, _) =>
+                  _AvailableHint(
+                allocation: allocation,
+                currency: currency,
+                existing: widget.existing,
+                forCategory: _categoryId != null,
+                typedCents: Money.parseToCents(value.text) ?? 0,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text('Se aplica a', style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
             Wrap(

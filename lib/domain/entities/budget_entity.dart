@@ -119,3 +119,89 @@ class BudgetProgress extends Equatable {
         categoryColor,
       ];
 }
+
+/// Reparto del presupuesto del mes entre las categorías.
+///
+/// El límite GLOBAL ("Todo el mes") es el dinero TOTAL con el que se cuenta, y
+/// cada límite por categoría reserva una parte de ese total. Lo que no está
+/// reservado, [availableCents], es lo que aún se puede repartir en categorías
+/// nuevas: por eso baja cada vez que se añade una.
+///
+/// No es una restricción, es información: la app deja pasar un reparto que se
+/// exceda del total —a veces se quiere avisar antes de cuadrarlo— y se limita
+/// a marcarlo con [isOverAllocated].
+class BudgetAllocation extends Equatable {
+  const BudgetAllocation({
+    required this.totalCents,
+    required this.assignedCents,
+    required this.categoryCount,
+    required this.hasGlobalBudget,
+  });
+
+  /// Calcula el reparto a partir de los presupuestos vigentes de un mes.
+  factory BudgetAllocation.from(Iterable<BudgetProgress> progress) {
+    int total = 0;
+    int assigned = 0;
+    int categories = 0;
+    bool hasGlobal = false;
+
+    for (final BudgetProgress p in progress) {
+      if (p.budget.isGlobal) {
+        total += p.limitCents;
+        hasGlobal = true;
+      } else {
+        assigned += p.limitCents;
+        categories++;
+      }
+    }
+
+    return BudgetAllocation(
+      totalCents: total,
+      assignedCents: assigned,
+      categoryCount: categories,
+      hasGlobalBudget: hasGlobal,
+    );
+  }
+
+  /// Dinero total del mes: el límite global.
+  final int totalCents;
+
+  /// Suma de los límites por categoría ya creados.
+  final int assignedCents;
+
+  /// Cuántas categorías tienen límite propio.
+  final int categoryCount;
+
+  /// `false` si todavía no hay límite global, y por tanto no hay total del que
+  /// repartir.
+  final bool hasGlobalBudget;
+
+  /// Lo que queda por repartir. Negativo si las categorías suman más que el
+  /// total.
+  int get availableCents => totalCents - assignedCents;
+
+  bool get isOverAllocated => assignedCents > totalCents;
+
+  /// Fracción del total ya repartida. Sin recortar: puede pasar de 1.
+  double get ratio => totalCents <= 0 ? 0 : assignedCents / totalCents;
+
+  int get percent => (ratio * 100).round();
+
+  /// Disponible al abrir el editor de [existing].
+  ///
+  /// Al EDITAR un límite de categoría, el importe que ya tenía vuelve a la
+  /// bolsa: si no, editar 100 EUR y dejarlos en 100 EUR parecería gastar el
+  /// doble.
+  int availableForEditing(BudgetEntity? existing) {
+    if (existing == null || existing.isGlobal) return availableCents;
+    return availableCents + existing.limitCents;
+  }
+
+  @override
+  List<Object?> get props => <Object?>[
+        totalCents,
+        assignedCents,
+        categoryCount,
+        hasGlobalBudget,
+      ];
+}
