@@ -64,10 +64,18 @@ El resultado queda en `build/web`, y ahí dentro va ya el `vercel.json`. Con la
 CLI:
 
 ```bash
-npx vercel deploy --prod build/web
+cp .vercel/project.json build/web/.vercel/project.json
+cd build/web && vercel deploy --prod
 ```
 
-O arrastrando la carpeta `build/web` a [vercel.com/new](https://vercel.com/new).
+El `cp` no es opcional. La CLI decide a qué proyecto sube mirando el `.vercel`
+del directorio que despliega y, si no lo encuentra, **crea uno nuevo con el
+nombre de la carpeta**. Como la carpeta se llama `web`, `vercel deploy build/web`
+acaba publicando en un proyecto llamado `web`, luego `web-1`, `web-2`... Lo mismo
+pasa arrastrando la carpeta a [vercel.com/new](https://vercel.com/new).
+
+La vinculación del repositorio se crea una sola vez con `vercel link`, pero vive
+en la raíz y `build/` se regenera en cada compilación: de ahí la copia.
 
 Vercel sirve HTTPS por defecto, que no es un detalle: **sin HTTPS no hay
 Face ID** —WebAuthn no existe fuera de un origen seguro— ni IndexedDB fiable en
