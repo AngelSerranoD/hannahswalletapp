@@ -213,6 +213,15 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
     super.dispose();
   }
 
+  /// La cartera elegida o, mientras no se elija, la predeterminada. Se
+  /// calcula: antes `build` la escribía en el estado al construir.
+  String? _effectiveWalletId(List<WalletEntity> wallets) {
+    if (_walletId != null || wallets.isEmpty) return _walletId;
+    return wallets
+        .firstWhere((WalletEntity w) => w.isDefault, orElse: () => wallets.first)
+        .id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -222,12 +231,6 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
     final List<CategoryEntity> categories =
         ref.watch(categoriesProvider(_type)).valueOrNull ??
             const <CategoryEntity>[];
-
-    if (_walletId == null && wallets.isNotEmpty) {
-      _walletId = wallets
-          .firstWhere((WalletEntity w) => w.isDefault, orElse: () => wallets.first)
-          .id;
-    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -246,24 +249,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
               style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            SegmentedButton<TransactionType>(
-              segments: const <ButtonSegment<TransactionType>>[
-                ButtonSegment<TransactionType>(
-                  value: TransactionType.expense,
-                  label: Text('Gasto'),
-                ),
-                ButtonSegment<TransactionType>(
-                  value: TransactionType.income,
-                  label: Text('Ingreso'),
-                ),
-              ],
-              selected: <TransactionType>{_type},
-              onSelectionChanged: (Set<TransactionType> s) => setState(() {
-                _type = s.first;
-                _categoryId = null;
-              }),
-              showSelectedIcon: false,
-            ),
+            _typeSelector(),
             const SizedBox(height: 16),
             TextField(
               controller: _amount,
@@ -284,42 +270,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
               ),
             ),
             const SizedBox(height: 18),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  flex: 3,
-                  child: DropdownButtonFormField<RecurrenceFrequency>(
-                    initialValue: _frequency,
-                    decoration: const InputDecoration(labelText: 'Frecuencia'),
-                    items: RecurrenceFrequency.values
-                        .map((RecurrenceFrequency f) =>
-                            DropdownMenuItem<RecurrenceFrequency>(
-                              value: f,
-                              child: Text(f.label),
-                            ))
-                        .toList(growable: false),
-                    onChanged: (RecurrenceFrequency? f) =>
-                        setState(() => _frequency = f ?? _frequency),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _interval,
-                    decoration: const InputDecoration(labelText: 'Cada'),
-                    items: List<DropdownMenuItem<int>>.generate(
-                      12,
-                      (int i) => DropdownMenuItem<int>(
-                        value: i + 1,
-                        child: Text('${i + 1}'),
-                      ),
-                    ),
-                    onChanged: (int? v) => setState(() => _interval = v ?? 1),
-                  ),
-                ),
-              ],
-            ),
+            _scheduleRow(),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _pickDate,
@@ -330,44 +281,20 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
             if (categories.isNotEmpty) ...<Widget>[
               Text('Categoría', style: theme.textTheme.titleMedium),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: categories
-                    .map((CategoryEntity c) => ChoiceChip(
-                          selected: _categoryId == c.id,
-                          onSelected: (_) => setState(() => _categoryId = c.id),
-                          avatar: IconBadge(
-                            iconCode: c.iconCode,
-                            colorValue: c.colorValue,
-                            size: 22,
-                          ),
-                          label: Text(c.name),
-                        ))
-                    .toList(growable: false),
-              ),
+              _categoryChips(categories),
               const SizedBox(height: 18),
             ],
             if (wallets.isNotEmpty) ...<Widget>[
               Text('Cartera', style: theme.textTheme.titleMedium),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: wallets
-                    .map((WalletEntity w) => ChoiceChip(
-                          selected: _walletId == w.id,
-                          onSelected: (_) => setState(() => _walletId = w.id),
-                          label: Text(w.name),
-                        ))
-                    .toList(growable: false),
-              ),
+              _walletChips(wallets),
             ],
             if (_error != null) ...<Widget>[
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.danger),
+                style:
+                    theme.textTheme.bodyMedium?.copyWith(color: AppColors.danger),
               ),
             ],
             const SizedBox(height: 20),
@@ -375,6 +302,103 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _typeSelector() {
+    return SegmentedButton<TransactionType>(
+      segments: const <ButtonSegment<TransactionType>>[
+        ButtonSegment<TransactionType>(
+          value: TransactionType.expense,
+          label: Text('Gasto'),
+        ),
+        ButtonSegment<TransactionType>(
+          value: TransactionType.income,
+          label: Text('Ingreso'),
+        ),
+      ],
+      selected: <TransactionType>{_type},
+      onSelectionChanged: (Set<TransactionType> s) => setState(() {
+        _type = s.first;
+        _categoryId = null;
+      }),
+      showSelectedIcon: false,
+    );
+  }
+
+  /// Frecuencia y cada cuántos periodos.
+  Widget _scheduleRow() {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          flex: 3,
+          child: DropdownButtonFormField<RecurrenceFrequency>(
+            initialValue: _frequency,
+            decoration: const InputDecoration(labelText: 'Frecuencia'),
+            items: RecurrenceFrequency.values
+                .map((RecurrenceFrequency f) =>
+                    DropdownMenuItem<RecurrenceFrequency>(
+                      value: f,
+                      child: Text(f.label),
+                    ))
+                .toList(growable: false),
+            onChanged: (RecurrenceFrequency? f) =>
+                setState(() => _frequency = f ?? _frequency),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: DropdownButtonFormField<int>(
+            initialValue: _interval,
+            decoration: const InputDecoration(labelText: 'Cada'),
+            items: List<DropdownMenuItem<int>>.generate(
+              12,
+              (int i) => DropdownMenuItem<int>(
+                value: i + 1,
+                child: Text('${i + 1}'),
+              ),
+            ),
+            onChanged: (int? v) => setState(() => _interval = v ?? 1),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _categoryChips(List<CategoryEntity> categories) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <Widget>[
+        for (final CategoryEntity c in categories)
+          ChoiceChip(
+            selected: _categoryId == c.id,
+            onSelected: (_) => setState(() => _categoryId = c.id),
+            avatar: IconBadge(
+              iconCode: c.iconCode,
+              colorValue: c.colorValue,
+              size: 22,
+            ),
+            label: Text(c.name),
+          ),
+      ],
+    );
+  }
+
+  Widget _walletChips(List<WalletEntity> wallets) {
+    final String? selected = _effectiveWalletId(wallets);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <Widget>[
+        for (final WalletEntity w in wallets)
+          ChoiceChip(
+            selected: selected == w.id,
+            onSelected: (_) => setState(() => _walletId = w.id),
+            label: Text(w.name),
+          ),
+      ],
     );
   }
 
@@ -395,7 +419,8 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
       setState(() => _error = 'Escribe un importe mayor que cero.');
       return;
     }
-    final String? walletId = _walletId;
+    final String? walletId = _effectiveWalletId(
+        ref.read(walletsProvider).valueOrNull ?? const <WalletEntity>[]);
     if (walletId == null) {
       setState(() => _error = 'Elige una cartera.');
       return;

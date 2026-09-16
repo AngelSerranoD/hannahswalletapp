@@ -74,14 +74,12 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: scheme,
-      // Roboto para el latino y Noto Sans SC para lo que no cubra.
+      // Archivo para el latino y Noto Sans SC para lo que no cubra.
       //
       // El orden importa: Flutter usa la primera fuente que tenga el glifo, así
-      // que las tildes y los símbolos de moneda siguen saliendo de Roboto y
-      // solo los caracteres chinos caen en la de reserva. Sin esta línea, un
-      // nombre de categoría en chino se vería como rectángulos vacíos.
+      // que las tildes y los símbolos de moneda siguen saliendo de Archivo y
+      // solo los caracteres chinos caen en la de reserva.
       fontFamily: bodyFont,
-      // Lo que Archivo no cubra -el chino- cae en Noto Sans SC.
       fontFamilyFallback: const <String>[CjkFontLoader.family],
       scaffoldBackgroundColor: AppColors.background,
       textTheme: text,
@@ -109,32 +107,7 @@ abstract final class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.surfaceAlt,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusM),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusM),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusM),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusM),
-          borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusM),
-          borderSide: const BorderSide(color: AppColors.danger, width: 2),
-        ),
-      ),
+      inputDecorationTheme: _inputTheme(),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
@@ -201,6 +174,28 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(radiusM),
         ),
       ),
+    );
+  }
+
+  /// Campos rellenos sin borde; el borde solo aparece con foco o con error.
+  static InputDecorationTheme _inputTheme() {
+    OutlineInputBorder border([BorderSide side = BorderSide.none]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusM),
+          borderSide: side,
+        );
+
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.surfaceAlt,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      border: border(),
+      enabledBorder: border(),
+      focusedBorder: border(const BorderSide(color: AppColors.primary, width: 2)),
+      errorBorder:
+          border(const BorderSide(color: AppColors.danger, width: 1.5)),
+      focusedErrorBorder:
+          border(const BorderSide(color: AppColors.danger, width: 2)),
     );
   }
 

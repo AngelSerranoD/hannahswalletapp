@@ -5,6 +5,7 @@ import 'package:hannahswalletapp/app.dart';
 import 'package:hannahswalletapp/core/di/providers.dart';
 import 'package:hannahswalletapp/data/backend/web/vault_store.dart';
 import 'package:hannahswalletapp/data/backend/web_backend.dart';
+import 'package:hannahswalletapp/presentation/screens/settings/settings_screen.dart';
 import 'package:idb_shim/idb_client_memory.dart';
 
 /// Recorrido completo de usuario sobre la app REAL.
@@ -274,5 +275,50 @@ void main() {
     await tester.tap(find.text('Categorías'));
     await settle(tester, rounds: 4);
     expect(find.text('Ocio · en Finde'), findsOneWidget);
+  });
+
+  testWidgets('una regla recurrente se guarda con la cartera predeterminada',
+      (WidgetTester tester) async {
+    await launch(tester);
+
+    await tester.enterText(find.byType(TextField).first, pass);
+    await tester.enterText(find.byType(TextField).at(1), pass);
+    await tester.tap(find.text('Lo entiendo'));
+    await settle(tester, rounds: 4);
+    await tester.tap(find.text('Crear bóveda'));
+    await settle(tester, rounds: 16);
+
+    await tester.tap(find.byIcon(Icons.settings_outlined).first);
+    await settle(tester, rounds: 8);
+    // La lista de Ajustes es perezosa: la fila no existe hasta desplazarse.
+    await tester.scrollUntilVisible(
+      find.text('Movimientos recurrentes'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SettingsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await settle(tester, rounds: 2);
+    await tester.tap(find.text('Movimientos recurrentes'));
+    await settle(tester, rounds: 8);
+
+    await tester.tap(find.text('Nueva regla'));
+    await settle(tester, rounds: 8);
+    await tester.enterText(find.widgetWithText(TextField, 'Importe'), '30');
+    await tester.enterText(find.widgetWithText(TextField, 'Concepto'), 'Gimnasio');
+    await settle(tester, rounds: 4);
+
+    // No se toca la cartera: la hoja tiene que usar la predeterminada. Si no
+    // la resolviese al guardar, la regla se quedaría sin cartera y no saldría.
+    await tester.ensureVisible(find.text('Guardar'));
+    await settle(tester, rounds: 2);
+    await tester.tap(find.text('Guardar'));
+    await settle(tester, rounds: 12);
+
+    expect(find.text('Guardar'), findsNothing, reason: 'La hoja se cierra');
+    expect(find.textContaining('Gimnasio'), findsWidgets);
   });
 }

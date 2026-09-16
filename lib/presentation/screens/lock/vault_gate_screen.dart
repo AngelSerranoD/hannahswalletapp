@@ -157,69 +157,10 @@ class _VaultGateScreenState extends ConsumerState<VaultGateScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 28),
-
                     if (blocked)
                       _LockoutNotice(remaining: _lockout)
-                    else ...<Widget>[
-                      TextField(
-                        controller: _passphrase,
-                        focusNode: _focus,
-                        autofocus: !biometricEnabled,
-                        obscureText: _obscure,
-                        enabled: !_busy,
-                        // `newPassword` al crear y `password` al abrir: así el
-                        // llavero de iOS ofrece guardarla la primera vez y
-                        // autocompletarla después.
-                        autofillHints: <String>[
-                          _isCreating
-                              ? AutofillHints.newPassword
-                              : AutofillHints.password,
-                        ],
-                        textInputAction: _isCreating
-                            ? TextInputAction.next
-                            : TextInputAction.done,
-                        onSubmitted: (_) {
-                          if (!_isCreating) _submit();
-                        },
-                        decoration: InputDecoration(
-                          labelText: 'Contraseña maestra',
-                          prefixIcon: const Icon(Icons.key_rounded),
-                          suffixIcon: IconButton(
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            tooltip: _obscure ? 'Mostrar' : 'Ocultar',
-                          ),
-                        ),
-                      ),
-                      if (_isCreating) ...<Widget>[
-                        const SizedBox(height: 14),
-                        TextField(
-                          controller: _confirm,
-                          obscureText: _obscure,
-                          enabled: !_busy,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _submit(),
-                          decoration: const InputDecoration(
-                            labelText: 'Repite la contraseña',
-                            prefixIcon: Icon(Icons.key_rounded),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _StrengthMeter(passphrase: _passphrase),
-                        const SizedBox(height: 16),
-                        _WarningBox(
-                          acknowledged: _acknowledged,
-                          onChanged: (bool v) =>
-                              setState(() => _acknowledged = v),
-                        ),
-                      ],
-                    ],
-
+                    else
+                      ..._passphraseFields(biometricEnabled),
                     if (_error != null) ...<Widget>[
                       const SizedBox(height: 14),
                       Text(
@@ -229,35 +170,8 @@ class _VaultGateScreenState extends ConsumerState<VaultGateScreen> {
                         textAlign: TextAlign.center,
                       ),
                     ],
-
                     const SizedBox(height: 24),
-                    FilledButton.icon(
-                      onPressed: (_busy || blocked) ? null : _submit,
-                      icon: _busy
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Icon(_isCreating
-                              ? Icons.lock_rounded
-                              : Icons.lock_open_rounded),
-                      label: Text(_isCreating ? 'Crear bóveda' : 'Desbloquear'),
-                    ),
-
-                    if (!_isCreating && biometricEnabled) ...<Widget>[
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed:
-                            (_busy || blocked) ? null : _tryBiometrics,
-                        icon: const Icon(Icons.face_rounded),
-                        label: const Text('Usar Face ID'),
-                      ),
-                    ],
-
+                    ..._actions(blocked: blocked, biometric: biometricEnabled),
                     const SizedBox(height: 18),
                     Text(
                       'Todo se guarda cifrado en este dispositivo. '
@@ -273,6 +187,92 @@ class _VaultGateScreenState extends ConsumerState<VaultGateScreen> {
         ),
       ),
     );
+  }
+
+  /// Contraseña y, al crear la bóveda, confirmación, fortaleza y aviso.
+  List<Widget> _passphraseFields(bool biometricEnabled) {
+    return <Widget>[
+      TextField(
+        controller: _passphrase,
+        focusNode: _focus,
+        autofocus: !biometricEnabled,
+        obscureText: _obscure,
+        enabled: !_busy,
+        // `newPassword` al crear y `password` al abrir: así el llavero de iOS
+        // ofrece guardarla la primera vez y autocompletarla después.
+        autofillHints: <String>[
+          _isCreating ? AutofillHints.newPassword : AutofillHints.password,
+        ],
+        textInputAction:
+            _isCreating ? TextInputAction.next : TextInputAction.done,
+        onSubmitted: (_) {
+          if (!_isCreating) _submit();
+        },
+        decoration: InputDecoration(
+          labelText: 'Contraseña maestra',
+          prefixIcon: const Icon(Icons.key_rounded),
+          suffixIcon: IconButton(
+            onPressed: () => setState(() => _obscure = !_obscure),
+            icon: Icon(
+              _obscure
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+            ),
+            tooltip: _obscure ? 'Mostrar' : 'Ocultar',
+          ),
+        ),
+      ),
+      if (_isCreating) ...<Widget>[
+        const SizedBox(height: 14),
+        TextField(
+          controller: _confirm,
+          obscureText: _obscure,
+          enabled: !_busy,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            labelText: 'Repite la contraseña',
+            prefixIcon: Icon(Icons.key_rounded),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _StrengthMeter(passphrase: _passphrase),
+        const SizedBox(height: 16),
+        _WarningBox(
+          acknowledged: _acknowledged,
+          onChanged: (bool v) => setState(() => _acknowledged = v),
+        ),
+      ],
+    ];
+  }
+
+  /// Crear o desbloquear y, si está activado, Face ID.
+  List<Widget> _actions({required bool blocked, required bool biometric}) {
+    final bool disabled = _busy || blocked;
+    return <Widget>[
+      FilledButton.icon(
+        onPressed: disabled ? null : _submit,
+        icon: _busy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(_isCreating ? Icons.lock_rounded : Icons.lock_open_rounded),
+        label: Text(_isCreating ? 'Crear bóveda' : 'Desbloquear'),
+      ),
+      if (!_isCreating && biometric) ...<Widget>[
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: disabled ? null : _tryBiometrics,
+          icon: const Icon(Icons.face_rounded),
+          label: const Text('Usar Face ID'),
+        ),
+      ],
+    ];
   }
 
   Future<void> _submit() async {

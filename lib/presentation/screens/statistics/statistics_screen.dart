@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -160,7 +162,6 @@ class _SeriesCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ThemeData theme = Theme.of(context);
     final List<SeriesBucket> buckets =
         ref.watch(statsSeriesProvider).valueOrNull ?? const <SeriesBucket>[];
 
@@ -173,15 +174,6 @@ class _SeriesCard extends ConsumerWidget {
       );
     }
 
-    // El eje Y se escala al mayor valor visible. Se añade un 15 % de aire para
-    // que la barra mas alta no toque el borde superior de la tarjeta.
-    final int maxCents = buckets.fold<int>(
-      0,
-      (int acc, SeriesBucket b) =>
-          <int>[acc, b.incomeCents, b.expenseCents].reduce((int a, int c) => a > c ? a : c),
-    );
-    final double maxY = maxCents == 0 ? 100 : maxCents * 1.15;
-
     return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +181,10 @@ class _SeriesCard extends ConsumerWidget {
           Row(
             children: <Widget>[
               Expanded(
-                child: Text('Evolución', style: theme.textTheme.titleMedium),
+                child: Text(
+                  'Evolución',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               const _LegendDot(color: AppColors.ink, label: 'Ingresos'),
               const SizedBox(width: 12),
@@ -203,116 +198,132 @@ class _SeriesCard extends ConsumerWidget {
           const SizedBox(height: 20),
           SizedBox(
             height: 190,
-            child: BarChart(
-              BarChartData(
-                maxY: maxY,
-                alignment: BarChartAlignment.spaceAround,
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY / 4,
-                  getDrawingHorizontalLine: (double value) => FlLine(
-                    color: theme.colorScheme.outlineVariant,
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(),
-                  rightTitles: const AxisTitles(),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 46,
-                      interval: maxY / 2,
-                      getTitlesWidget: (double value, TitleMeta meta) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Text(
-                          Money.formatCompact(
-                            value.round(),
-                            currencyCode: currency,
-                          ),
-                          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 28,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        final int i = value.round();
-                        if (i < 0 || i >= buckets.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final SeriesBucket b = buckets[i];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            b.label,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 11,
-                              fontWeight:
-                                  b.isCurrent ? FontWeight.w700 : FontWeight.w400,
-                              color: b.isCurrent
-                                  ? theme.colorScheme.onSurface
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => AppColors.ink,
-                    getTooltipItem: (
-                      BarChartGroupData group,
-                      int groupIndex,
-                      BarChartRodData rod,
-                      int rodIndex,
-                    ) {
-                      return BarTooltipItem(
-                        Money.format(rod.toY.round(), currencyCode: currency),
-                        const TextStyle(
-                          color: AppColors.paper,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                barGroups: <BarChartGroupData>[
-                  for (int i = 0; i < buckets.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barsSpace: 3,
-                      barRods: <BarChartRodData>[
-                        BarChartRodData(
-                          toY: buckets[i].incomeCents.toDouble(),
-                          color: AppColors.ink,
-                          width: _barWidth(buckets.length),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        BarChartRodData(
-                          toY: buckets[i].expenseCents.toDouble(),
-                          color: AppColors.textTertiary,
-                          width: _barWidth(buckets.length),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              duration: const Duration(milliseconds: 380),
-              curve: Curves.easeOutCubic,
-            ),
+            child: _SeriesChart(buckets: buckets, currency: currency),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Barras de ingresos y gastos por tramo.
+class _SeriesChart extends StatelessWidget {
+  const _SeriesChart({required this.buckets, required this.currency});
+
+  final List<SeriesBucket> buckets;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+
+    // El eje Y se escala al mayor valor visible, con un 15 % de aire para que
+    // la barra más alta no toque el borde superior de la tarjeta.
+    final int maxCents = buckets.fold<int>(
+      0,
+      (int acc, SeriesBucket b) =>
+          math.max(acc, math.max(b.incomeCents, b.expenseCents)),
+    );
+    final double maxY = maxCents == 0 ? 100 : maxCents * 1.15;
+
+    return BarChart(
+      BarChartData(
+        maxY: maxY,
+        alignment: BarChartAlignment.spaceAround,
+        borderData: FlBorderData(show: false),
+        gridData: FlGridData(
+          drawVerticalLine: false,
+          horizontalInterval: maxY / 4,
+          getDrawingHorizontalLine: (double value) => FlLine(
+            color: theme.colorScheme.outlineVariant,
+            strokeWidth: 1,
+          ),
+        ),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(),
+          rightTitles: const AxisTitles(),
+          leftTitles: AxisTitles(sideTitles: _amountAxis(theme, maxY)),
+          bottomTitles: AxisTitles(sideTitles: _periodAxis(theme)),
+        ),
+        barTouchData: BarTouchData(
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipColor: (_) => AppColors.ink,
+            getTooltipItem: (_, _, BarChartRodData rod, _) => BarTooltipItem(
+              Money.format(rod.toY.round(), currencyCode: currency),
+              const TextStyle(
+                color: AppColors.paper,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+        barGroups: <BarChartGroupData>[
+          for (int i = 0; i < buckets.length; i++) _group(i),
+        ],
+      ),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  SideTitles _amountAxis(ThemeData theme, double maxY) {
+    return SideTitles(
+      showTitles: true,
+      reservedSize: 46,
+      interval: maxY / 2,
+      getTitlesWidget: (double value, TitleMeta meta) => Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Text(
+          Money.formatCompact(value.round(), currencyCode: currency),
+          style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+          textAlign: TextAlign.right,
+        ),
+      ),
+    );
+  }
+
+  /// Etiqueta de cada tramo; la del tramo en curso, destacada.
+  SideTitles _periodAxis(ThemeData theme) {
+    return SideTitles(
+      showTitles: true,
+      reservedSize: 28,
+      getTitlesWidget: (double value, TitleMeta meta) {
+        final int i = value.round();
+        if (i < 0 || i >= buckets.length) return const SizedBox.shrink();
+        final SeriesBucket b = buckets[i];
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            b.label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              fontWeight: b.isCurrent ? FontWeight.w700 : FontWeight.w400,
+              color: b.isCurrent
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  BarChartGroupData _group(int i) {
+    final double width = _barWidth(buckets.length);
+    BarChartRodData rod(int cents, Color color) => BarChartRodData(
+          toY: cents.toDouble(),
+          color: color,
+          width: width,
+          borderRadius: BorderRadius.circular(4),
+        );
+    return BarChartGroupData(
+      x: i,
+      barsSpace: 3,
+      barRods: <BarChartRodData>[
+        rod(buckets[i].incomeCents, AppColors.ink),
+        rod(buckets[i].expenseCents, AppColors.textTertiary),
+      ],
     );
   }
 

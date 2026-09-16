@@ -92,26 +92,22 @@ class _TransactionEditorScreenState
     super.dispose();
   }
 
+  /// Cartera de origen: la elegida o, mientras no se elija, la predeterminada.
+  ///
+  /// Se calcula en vez de guardarse en el estado. Antes `build` programaba un
+  /// `setState` tras cada reconstrucción hasta que la lista de carteras
+  /// llegaba, lo que añadía reconstrucciones sin cambiar nada visible.
+  String? _effectiveWalletId(List<WalletEntity> wallets) {
+    if (_walletId != null || wallets.isEmpty) return _walletId;
+    return wallets
+        .firstWhere((WalletEntity w) => w.isDefault, orElse: () => wallets.first)
+        .id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final String currency = ref.watch(currencyProvider);
-    final AsyncValue<List<WalletEntity>> wallets = ref.watch(walletsProvider);
-    final AsyncValue<List<CategoryEntity>> categories =
-        ref.watch(categoriesProvider(_type));
-
-    // Preseleccion de la cartera por defecto en cuanto se conocen.
-    wallets.whenData((List<WalletEntity> list) {
-      if (_walletId == null && list.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() => _walletId = list
-                .firstWhere((WalletEntity w) => w.isDefault, orElse: () => list.first)
-                .id);
-          }
-        });
-      }
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -137,66 +133,11 @@ class _TransactionEditorScreenState
           const SizedBox(height: 26),
           _AmountField(controller: _amount, type: _type, currencyCode: currency),
           const SizedBox(height: 26),
-
           if (_type != TransactionType.transfer) ...<Widget>[
-            Text('Categoría', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            categories.when(
-              data: (List<CategoryEntity> list) => _CategoryPicker(
-                type: _type,
-                categories: list,
-                selectedId: _categoryId,
-                onSelected: (String id) => setState(
-                  () => _categoryId = _categoryId == id ? null : id,
-                ),
-              ),
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (Object e, _) => FailureView(message: e.toString()),
-            ),
+            ..._categorySection(theme),
             const SizedBox(height: 26),
           ],
-
-          Text(
-            _type == TransactionType.transfer ? 'Desde' : 'Cartera',
-            style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          wallets.when(
-            data: (List<WalletEntity> list) => _WalletPicker(
-              wallets: list,
-              selectedId: _walletId,
-              onSelected: (String id) => setState(() {
-                _walletId = id;
-                if (_destinationWalletId == id) _destinationWalletId = null;
-              }),
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (Object e, _) => FailureView(message: e.toString()),
-          ),
-
-          if (_type == TransactionType.transfer) ...<Widget>[
-            const SizedBox(height: 22),
-            Text('Hacia', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            wallets.when(
-              data: (List<WalletEntity> list) => _WalletPicker(
-                wallets: list
-                    .where((WalletEntity w) => w.id != _walletId)
-                    .toList(growable: false),
-                selectedId: _destinationWalletId,
-                onSelected: (String id) =>
-                    setState(() => _destinationWalletId = id),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (Object e, _) => FailureView(message: e.toString()),
-            ),
-          ],
-
+          ..._walletSection(theme),
           const SizedBox(height: 26),
           _DateRow(
             value: _occurredAt,
@@ -214,40 +155,113 @@ class _TransactionEditorScreenState
             ),
             maxLength: 120,
           ),
-
           if (_error != null) ...<Widget>[
             const SizedBox(height: 8),
             Text(
               _error!,
-              style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.danger),
+              style:
+                  theme.textTheme.bodyMedium?.copyWith(color: AppColors.danger),
             ),
           ],
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: FilledButton.icon(
-          onPressed: _saving ? null : _save,
-          style: FilledButton.styleFrom(
-            backgroundColor: switch (_type) {
-              TransactionType.income => AppColors.income,
-              TransactionType.expense => AppColors.primary,
-              TransactionType.transfer => theme.colorScheme.secondary,
-            },
-            foregroundColor: Colors.white,
+      bottomNavigationBar: _saveButton(theme),
+    );
+  }
+
+  List<Widget> _categorySection(ThemeData theme) {
+    return <Widget>[
+      Text('Categoría', style: theme.textTheme.titleMedium),
+      const SizedBox(height: 12),
+      ref.watch(categoriesProvider(_type)).when(
+            data: (List<CategoryEntity> list) => _CategoryPicker(
+              type: _type,
+              categories: list,
+              selectedId: _categoryId,
+              onSelected: (String id) => setState(
+                () => _categoryId = _categoryId == id ? null : id,
+              ),
+            ),
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (Object e, _) => FailureView(message: e.toString()),
           ),
-          icon: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.check_rounded),
-          label: Text(_isEditing ? 'Guardar cambios' : 'Guardar'),
+    ];
+  }
+
+  /// Cartera y, en un traspaso, también la de destino.
+  List<Widget> _walletSection(ThemeData theme) {
+    final AsyncValue<List<WalletEntity>> wallets = ref.watch(walletsProvider);
+    final bool transfer = _type == TransactionType.transfer;
+
+    Widget picker({
+      required bool destination,
+    }) =>
+        wallets.when(
+          data: (List<WalletEntity> list) {
+            final String? from = _effectiveWalletId(list);
+            return _WalletPicker(
+              wallets: destination
+                  ? list
+                      .where((WalletEntity w) => w.id != from)
+                      .toList(growable: false)
+                  : list,
+              selectedId: destination ? _destinationWalletId : from,
+              onSelected: (String id) => setState(() {
+                if (destination) {
+                  _destinationWalletId = id;
+                } else {
+                  _walletId = id;
+                  if (_destinationWalletId == id) _destinationWalletId = null;
+                }
+              }),
+            );
+          },
+          loading: () => const LinearProgressIndicator(),
+          error: (Object e, _) => FailureView(message: e.toString()),
+        );
+
+    return <Widget>[
+      Text(transfer ? 'Desde' : 'Cartera', style: theme.textTheme.titleMedium),
+      const SizedBox(height: 12),
+      picker(destination: false),
+      if (transfer) ...<Widget>[
+        const SizedBox(height: 22),
+        Text('Hacia', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 12),
+        picker(destination: true),
+      ],
+    ];
+  }
+
+  Widget _saveButton(ThemeData theme) {
+    return SafeArea(
+      minimum: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: FilledButton.icon(
+        onPressed: _saving ? null : _save,
+        style: FilledButton.styleFrom(
+          backgroundColor: switch (_type) {
+            TransactionType.income => AppColors.income,
+            TransactionType.expense => AppColors.primary,
+            TransactionType.transfer => theme.colorScheme.secondary,
+          },
+          foregroundColor: Colors.white,
         ),
+        icon: _saving
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.check_rounded),
+        label: Text(_isEditing ? 'Guardar cambios' : 'Guardar'),
       ),
     );
   }
@@ -258,7 +272,8 @@ class _TransactionEditorScreenState
       setState(() => _error = 'Escribe un importe mayor que cero.');
       return;
     }
-    final String? walletId = _walletId;
+    final String? walletId = _effectiveWalletId(
+        ref.read(walletsProvider).valueOrNull ?? const <WalletEntity>[]);
     if (walletId == null) {
       setState(() => _error = 'Elige una cartera.');
       return;
