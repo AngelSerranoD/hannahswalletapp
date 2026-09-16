@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../domain/entities/wallet_entity.dart';
 import '../../../models/entity_mappers.dart';
 import '../database_provider.dart';
@@ -114,7 +115,7 @@ class WalletDao {
       <String, Object?>{
         'is_archived': 1,
         'is_default': 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -127,7 +128,7 @@ class WalletDao {
       DatabaseSchema.tableWallets,
       <String, Object?>{
         'is_archived': 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],

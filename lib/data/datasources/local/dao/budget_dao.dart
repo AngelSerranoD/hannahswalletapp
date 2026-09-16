@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/budget_entity.dart';
 import '../../../models/entity_mappers.dart';
@@ -69,7 +70,7 @@ class BudgetDao {
       DatabaseSchema.tableBudgets,
       <String, Object?>{
         'is_deleted': 1,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],

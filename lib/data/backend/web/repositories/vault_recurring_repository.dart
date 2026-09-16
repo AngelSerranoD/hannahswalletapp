@@ -1,4 +1,5 @@
 import '../../../../core/error/failures.dart';
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/id_generator.dart';
 import '../../../../domain/entities/recurring_rule_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
@@ -60,7 +61,7 @@ class VaultRecurringRepository implements RecurringRepository {
 
   @override
   Future<int> materializeDue() async {
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     int created = 0;
 
     for (final RecurringRuleEntity rule in await getAll(onlyActive: true)) {
@@ -74,7 +75,7 @@ class VaultRecurringRepository implements RecurringRepository {
         final DateTime? end = rule.endAt;
         if (end != null && cursor.isAfter(end)) break;
 
-        final DateTime stamp = DateTime.now();
+        final DateTime stamp = AppClock.now();
         final TransactionEntity tx = TransactionEntity(
           id: IdGenerator.newId(),
           walletId: rule.walletId,

@@ -1,4 +1,5 @@
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../domain/entities/budget_entity.dart';
@@ -37,7 +38,7 @@ class VaultAnalyticsRepository implements AnalyticsRepository {
   Future<int> getAverageDailyExpense(DateTime month) async {
     final DateRange range = DateRange.monthOf(month);
     final PeriodTotals totals = VaultQueries.totals(_d, range);
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final int elapsed = range.contains(now)
         ? now.day
         : range.end.difference(range.start).inDays;
@@ -46,7 +47,7 @@ class VaultAnalyticsRepository implements AnalyticsRepository {
 
   @override
   Future<DashboardSummary> getDashboardSummary() async {
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final BudgetProgress? global = await VaultBudgetRepository(_session)
         .getGlobalProgress(now);
 

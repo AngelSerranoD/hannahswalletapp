@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/money.dart';
 import '../../../domain/entities/analytics.dart';
@@ -75,7 +76,7 @@ class _PeriodNavigator extends ConsumerWidget {
     final ThemeData theme = Theme.of(context);
     // No se deja avanzar mas alla del periodo actual: no hay datos del futuro
     // y una gráfica vacia solo confunde.
-    final bool canGoForward = range.end.isBefore(DateTime.now());
+    final bool canGoForward = range.end.isBefore(AppClock.now());
 
     return Row(
       children: <Widget>[

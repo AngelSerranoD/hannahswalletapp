@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../domain/entities/budget_entity.dart';
 import '../../../domain/entities/category_entity.dart';
@@ -96,7 +97,7 @@ class VaultData {
   /// identica en las dos plataformas.
   factory VaultData.seeded() {
     final VaultData vault = VaultData();
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
 
     final WalletEntity wallet = WalletEntity(
       id: IdGenerator.newId(),
@@ -181,7 +182,7 @@ class VaultData {
   /// Serializa al formato de copia de seguridad, compatible con la versión
   /// nativa fila por fila.
   Map<String, dynamic> toBackupMap() {
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int now = AppClock.now().millisecondsSinceEpoch;
     return <String, dynamic>{
       'wallets': wallets.values.map((WalletEntity w) => w.toMap()).toList(),
       'categories':

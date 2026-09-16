@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/utils/app_clock.dart';
 
 /// Naturaleza de un movimiento.
 enum TransactionType {
@@ -88,7 +89,7 @@ class TransactionEntity extends Equatable {
       recurringRuleId: recurringRuleId,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? AppClock.now(),
     );
   }
 

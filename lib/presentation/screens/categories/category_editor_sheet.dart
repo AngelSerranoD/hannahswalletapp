@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/icon_catalog.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../domain/entities/category_entity.dart';
@@ -141,7 +142,7 @@ class _CategoryEditorSheetState extends ConsumerState<CategoryEditorSheet> {
     }
 
     final CategoryEntity? existing = widget.existing;
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final CategoryRepository repo = ref.read(categoryRepositoryProvider);
     final CategoryEntity category = CategoryEntity(
       id: existing?.id ?? IdGenerator.newId(),

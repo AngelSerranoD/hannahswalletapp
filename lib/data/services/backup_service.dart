@@ -8,6 +8,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/app_clock.dart';
 import '../../core/utils/date_range.dart';
 import '../datasources/local/data_change_bus.dart';
 import '../datasources/local/database_provider.dart';
@@ -120,7 +121,7 @@ class BackupService {
         'format_version': AppConstants.backupFormatVersion,
         'schema_version': AppConstants.databaseVersion,
         'app_name': AppConstants.appName,
-        'exported_at': DateTime.now().toUtc().toIso8601String(),
+        'exported_at': AppClock.now().toUtc().toIso8601String(),
         'counts': counts,
         // Huella del contenido: permite detectar un fichero truncado o
         // manipulado antes de empezar a escribir en la base.
@@ -155,7 +156,7 @@ class BackupService {
       final String json = await exportToJsonString();
       final Directory dir = await getTemporaryDirectory();
       final String name =
-          'hannahs-wallet-${AppDates.fileStamp(DateTime.now())}.json';
+          'hannahs-wallet-${AppDates.fileStamp(AppClock.now())}.json';
       final File file = File(p.join(dir.path, name));
       await file.writeAsString(json, flush: true);
       return file;

@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../domain/entities/budget_entity.dart';
@@ -156,7 +157,7 @@ abstract final class VaultQueries {
     final List<DateTime> starts = _bucketStarts(period, anchor);
     if (starts.isEmpty) return const <SeriesBucket>[];
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final List<DateTime> ends = starts
         .map((DateTime start) => _bucketEnd(period, start))
         .toList(growable: false);

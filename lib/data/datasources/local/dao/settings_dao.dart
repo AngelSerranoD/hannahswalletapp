@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../database_provider.dart';
 import '../database_schema.dart';
 
@@ -42,7 +43,7 @@ class SettingsDao {
       <String, Object?>{
         'key': key,
         'value': value,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -50,7 +51,7 @@ class SettingsDao {
 
   Future<void> writeAll(Map<String, String> values) async {
     final Database db = await _provider.database();
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int now = AppClock.now().millisecondsSinceEpoch;
     final Batch batch = db.batch();
     values.forEach((String key, String value) {
       batch.insert(

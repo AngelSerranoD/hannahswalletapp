@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:intl/intl.dart';
+import 'app_clock.dart';
 
 /// Granularidad del selector de periodo de la pantalla de estadísticas.
 ///
@@ -115,7 +116,7 @@ abstract final class AppDates {
       _cache['$loc|$pattern'] ??= DateFormat(pattern, loc);
 
   static String dayHeader(DateTime day) {
-    final DateTime today = _atMidnight(DateTime.now());
+    final DateTime today = _atMidnight(AppClock.now());
     final DateTime d = _atMidnight(day);
     final int diff = today.difference(d).inDays;
     if (diff == 0) return 'Hoy';

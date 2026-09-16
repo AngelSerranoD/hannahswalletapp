@@ -1,4 +1,5 @@
 import '../../../../core/error/failures.dart';
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/transaction_entity.dart';
 import '../../../../domain/repositories/repositories.dart';
@@ -113,7 +114,7 @@ class VaultTransactionRepository implements TransactionRepository {
   @override
   Future<int> purgeDeleted({int olderThanDays = 30}) async {
     final DateTime cutoff =
-        DateTime.now().subtract(Duration(days: olderThanDays));
+        AppClock.now().subtract(Duration(days: olderThanDays));
     final List<String> doomed = _d.transactions.values
         .where((TransactionEntity t) =>
             t.isDeleted && t.updatedAt.isBefore(cutoff))

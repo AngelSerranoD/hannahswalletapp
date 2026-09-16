@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../core/utils/app_clock.dart';
 
 /// Una cartera o cuenta: efectivo, banco, tarjeta, hucha...
 ///
@@ -54,7 +55,7 @@ class WalletEntity extends Equatable {
       isArchived: isArchived ?? this.isArchived,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? AppClock.now(),
     );
   }
 

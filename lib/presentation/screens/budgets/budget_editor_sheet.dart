@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/money.dart';
@@ -274,7 +275,7 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
       _error = null;
     });
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final BudgetEntity budget = BudgetEntity(
       id: _existing?.id ?? IdGenerator.newId(),
       name: _name.text,

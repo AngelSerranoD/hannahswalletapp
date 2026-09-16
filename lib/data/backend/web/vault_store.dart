@@ -2,6 +2,7 @@ import 'package:idb_shim/idb_browser.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/utils/app_clock.dart';
 import 'vault_envelope.dart';
 
 /// Registro de intentos fallidos de contraseña.
@@ -26,12 +27,12 @@ class AttemptRecord {
   final DateTime? lockedUntil;
 
   bool get isLocked =>
-      lockedUntil != null && DateTime.now().isBefore(lockedUntil!);
+      lockedUntil != null && AppClock.now().isBefore(lockedUntil!);
 
   Duration get remaining {
     final DateTime? until = lockedUntil;
     if (until == null) return Duration.zero;
-    final Duration left = until.difference(DateTime.now());
+    final Duration left = until.difference(AppClock.now());
     return left.isNegative ? Duration.zero : left;
   }
 

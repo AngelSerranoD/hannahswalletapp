@@ -3,6 +3,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/id_generator.dart';
 
 /// Contenido inicial de una base recien creada.
@@ -15,7 +16,7 @@ import '../../../core/utils/id_generator.dart';
 /// vinieron de fabrica y poder reofrecerlas si el usuario las borra todas.
 abstract final class SeedData {
   static Future<void> populate(Transaction txn) async {
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int now = AppClock.now().millisecondsSinceEpoch;
 
     await txn.insert('wallets', <String, Object?>{
       'id': IdGenerator.newId(),

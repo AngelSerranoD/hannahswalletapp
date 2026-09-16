@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hannahswalletapp/core/di/providers.dart';
 import 'package:hannahswalletapp/core/theme/app_theme.dart';
+import 'package:hannahswalletapp/core/utils/app_clock.dart';
 import 'package:hannahswalletapp/core/utils/id_generator.dart';
 import 'package:hannahswalletapp/data/backend/app_backend.dart';
 import 'package:hannahswalletapp/data/backend/web/vault_store.dart';
@@ -53,10 +54,15 @@ void main() {
   //
   // Ninguna captura modifica datos, asi que compartir la boveda es seguro.
   setUpAll(() async {
+    // Reloj fijo: las capturas enseñan el mes en curso, "Hoy", "Ayer" y el día
+    // de la semana. Con el reloj real caducaban solas al cambiar de mes.
+    AppClock.fix(DateTime(2026, 9, 16, 19));
     await initializeDateFormatting('es_ES');
     await _loadRealFonts();
     backend = await _seededBackend();
   });
+
+  tearDownAll(AppClock.reset);
 
   Future<void> render(
     WidgetTester tester,
@@ -194,14 +200,11 @@ Future<AppBackend> _seededBackend() async {
   final List<CategoryEntity> incomes =
       await backend.categories.getCategories(type: TransactionType.income);
 
-  // Fechas RELATIVAS a hoy, con la hora fija.
-  //
-  // Con fechas absolutas las capturas cambiaban solas: la cabecera del
-  // dashboard dice "Hoy" o "Ayer" comparando con la fecha real, asi que una
-  // captura generada el dia 20 empezaba a fallar el 21. Anclando los datos a
-  // `DateTime.now()` y fijando solo la hora, el texto es siempre el mismo y la
-  // prueba deja de caducar.
-  final DateTime now = DateTime.now();
+  // Fechas relativas al reloj de la app, que las capturas fijan en
+  // `setUpAll`. Anclarlas solo a la fecha real con la hora fija no bastaba:
+  // estabilizaba "Hoy" y "Ayer", pero el mes, el día de la semana y los datos
+  // que cruzan de un mes a otro seguían cambiando con el calendario.
+  final DateTime now = AppClock.now();
   final DateTime today = DateTime(now.year, now.month, now.day, 18, 30);
   DateTime daysAgo(int days, int hour, [int minute = 0]) {
     final DateTime d = today.subtract(Duration(days: days));

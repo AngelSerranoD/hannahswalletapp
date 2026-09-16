@@ -3,20 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/money.dart';
 import '../../../domain/entities/category_entity.dart';
-import '../categories/category_editor_sheet.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/entities/wallet_entity.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../providers/data_providers.dart';
 import '../../widgets/common.dart';
+import '../categories/category_editor_sheet.dart';
 
 /// Alta y edicion de movimientos.
 ///
@@ -74,7 +75,7 @@ class _TransactionEditorScreenState
     super.initState();
     final TransactionEntity? existing = widget.existing;
     _type = existing?.type ?? widget.initialType;
-    _occurredAt = existing?.occurredAt ?? DateTime.now();
+    _occurredAt = existing?.occurredAt ?? AppClock.now();
     _categoryId = existing?.categoryId;
     _walletId = existing?.walletId;
     _destinationWalletId = existing?.transferWalletId;
@@ -272,7 +273,7 @@ class _TransactionEditorScreenState
       _error = null;
     });
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final String note = _note.text.trim();
 
     final TransactionEntity entity = TransactionEntity(
@@ -615,7 +616,7 @@ class _DateRow extends StatelessWidget {
       firstDate: DateTime(2000),
       // Se permite anotar en el futuro: es normal registrar un recibo
       // domiciliado con la fecha en que se cargara.
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      lastDate: AppClock.now().add(const Duration(days: 365 * 5)),
       locale: const Locale('es', 'ES'),
     );
     if (picked == null) return;

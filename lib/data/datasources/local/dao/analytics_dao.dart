@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/analytics.dart';
 import '../../../../domain/entities/category_entity.dart';
@@ -101,7 +102,7 @@ class AnalyticsDao {
             (asInt(r['income_cents']), asInt(r['expense_cents'])),
     };
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     return starts.map((DateTime start) {
       final String key = _bucketKey(period, start);
       final (int, int) values = byBucket[key] ?? (0, 0);
@@ -199,7 +200,7 @@ class AnalyticsDao {
   Future<int> averageDailyExpense(DateTime month) async {
     final DateRange range = DateRange.monthOf(month);
     final PeriodTotals totals = await totalsForRange(range);
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final int elapsedDays = range.contains(now)
         ? now.day
         : range.end.difference(range.start).inDays;

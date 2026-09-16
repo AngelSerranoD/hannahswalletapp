@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/app_clock.dart';
 import 'category_entity.dart';
 
 /// Límite de gasto.
@@ -69,7 +70,7 @@ class BudgetEntity extends Equatable {
       limitCents: limitCents ?? this.limitCents,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? AppClock.now(),
     );
   }
 

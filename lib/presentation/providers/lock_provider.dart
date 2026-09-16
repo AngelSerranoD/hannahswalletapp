@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/providers.dart';
+import '../../core/utils/app_clock.dart';
 import '../../data/backend/web/biometric_unlock.dart';
 import 'app_settings_provider.dart';
 
@@ -80,7 +81,7 @@ class AppLockNotifier extends Notifier<LockStatus> {
   /// La app se fue a segundo plano: solo se anota el instante.
   void onPaused() {
     if (state == LockStatus.unlocked) {
-      _backgroundedAt = DateTime.now();
+      _backgroundedAt = AppClock.now();
     }
   }
 
@@ -93,7 +94,7 @@ class AppLockNotifier extends Notifier<LockStatus> {
     final DateTime? since = _backgroundedAt;
     if (since == null) return;
 
-    if (DateTime.now().difference(since) >= grace) {
+    if (AppClock.now().difference(since) >= grace) {
       _unlockedThisSession = false;
       _backgroundedAt = null;
       state = LockStatus.locked;

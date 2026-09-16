@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/providers.dart';
+import '../../core/utils/app_clock.dart';
 import '../../core/utils/date_range.dart';
 import '../../domain/entities/analytics.dart';
 import '../../domain/entities/budget_entity.dart';
@@ -130,7 +131,7 @@ final FutureProviderFamily<List<CategoryEntity>, TransactionType?>
 
 /// Mes que se esta consultando en la pantalla de presupuestos.
 final StateProvider<DateTime> budgetMonthProvider =
-    StateProvider<DateTime>((Ref ref) => DateTime.now());
+    StateProvider<DateTime>((Ref ref) => AppClock.now());
 
 /// Todos los presupuestos vivos, de cualquier mes. El editor los necesita para
 /// saber qué categorías ya están en otro límite con la misma vigencia.
@@ -176,7 +177,7 @@ final StateProvider<StatsPeriod> statsPeriodProvider =
 
 /// Fecha de referencia del periodo mostrado. Cambiarla es "mes anterior".
 final StateProvider<DateTime> statsAnchorProvider =
-    StateProvider<DateTime>((Ref ref) => DateTime.now());
+    StateProvider<DateTime>((Ref ref) => AppClock.now());
 
 final Provider<DateRange> statsRangeProvider = Provider<DateRange>((Ref ref) {
   return DateRange.of(

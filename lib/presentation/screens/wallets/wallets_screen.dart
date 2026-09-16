@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/icon_catalog.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/money.dart';
@@ -267,7 +268,7 @@ class _WalletEditorSheetState extends ConsumerState<WalletEditorSheet> {
       return;
     }
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final WalletEntity wallet = WalletEntity(
       id: widget.existing?.id ?? IdGenerator.newId(),
       name: name,

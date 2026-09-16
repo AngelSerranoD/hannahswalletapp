@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../domain/entities/category_entity.dart';
 import '../../../../domain/entities/transaction_entity.dart';
 import '../../../models/entity_mappers.dart';
@@ -78,7 +79,7 @@ class CategoryDao {
       DatabaseSchema.tableCategories,
       <String, Object?>{
         'is_deleted': 1,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -91,7 +92,7 @@ class CategoryDao {
       DatabaseSchema.tableCategories,
       <String, Object?>{
         'is_deleted': 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -112,7 +113,7 @@ class CategoryDao {
 
   Future<void> reorder(List<String> orderedIds) async {
     final Database db = await _provider.database();
-    final int now = DateTime.now().millisecondsSinceEpoch;
+    final int now = AppClock.now().millisecondsSinceEpoch;
     final Batch batch = db.batch();
     for (int i = 0; i < orderedIds.length; i++) {
       batch.update(

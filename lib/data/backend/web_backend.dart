@@ -6,20 +6,21 @@ import 'package:cryptography/cryptography.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/app_clock.dart';
 import '../../domain/repositories/repositories.dart';
 import '../datasources/local/data_change_bus.dart';
 import 'app_backend.dart';
 import 'web/biometric_unlock.dart';
+import 'web/repositories/vault_analytics_repository.dart';
+import 'web/repositories/vault_budget_repository.dart';
+import 'web/repositories/vault_category_repository.dart';
+import 'web/repositories/vault_recurring_repository.dart';
+import 'web/repositories/vault_session.dart';
+import 'web/repositories/vault_settings_repository.dart';
+import 'web/repositories/vault_transaction_repository.dart';
+import 'web/repositories/vault_wallet_repository.dart';
 import 'web/vault_data.dart';
 import 'web/vault_envelope.dart';
-import 'web/repositories/vault_session.dart';
-import 'web/repositories/vault_wallet_repository.dart';
-import 'web/repositories/vault_category_repository.dart';
-import 'web/repositories/vault_transaction_repository.dart';
-import 'web/repositories/vault_budget_repository.dart';
-import 'web/repositories/vault_analytics_repository.dart';
-import 'web/repositories/vault_settings_repository.dart';
-import 'web/repositories/vault_recurring_repository.dart';
 import 'web/vault_store.dart';
 
 /// Backend de la PWA: bóveda cifrada sobre IndexedDB.
@@ -197,7 +198,7 @@ class WebBackend implements AppBackend {
         AppConstants.maxLockout.inSeconds,
         5 * pow(2, step - 1).toInt(),
       );
-      until = DateTime.now().add(Duration(seconds: seconds));
+      until = AppClock.now().add(Duration(seconds: seconds));
     }
 
     await _store.writeAttempts(
@@ -434,7 +435,7 @@ class _WebBackupPort implements BackupPort {
       'format_version': AppConstants.backupFormatVersion,
       'schema_version': AppConstants.databaseVersion,
       'app_name': AppConstants.appName,
-      'exported_at': DateTime.now().toUtc().toIso8601String(),
+      'exported_at': AppClock.now().toUtc().toIso8601String(),
       'counts': _data.counts,
       'checksum': await _sha256(jsonEncode(data)),
       'data': data,

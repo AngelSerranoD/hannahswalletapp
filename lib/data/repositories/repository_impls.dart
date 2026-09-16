@@ -1,5 +1,6 @@
 import '../../core/constants/app_constants.dart';
 import '../../core/error/failures.dart';
+import '../../core/utils/app_clock.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/id_generator.dart';
 import '../../domain/entities/analytics.dart';
@@ -335,7 +336,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
   /// tras otra multiplicaría por cuatro el tiempo hasta el primer frame.
   @override
   Future<DashboardSummary> getDashboardSummary() async {
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final DateRange month = DateRange.monthOf(now);
 
     final List<Object?> results = await Future.wait<Object?>(<Future<Object?>>[
@@ -438,7 +439,7 @@ class RecurringRepositoryImpl implements RecurringRepository {
 
   @override
   Future<int> materializeDue() async {
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final List<RecurringRuleEntity> due = await _dao.findDue(now);
     if (due.isEmpty) return 0;
 
@@ -453,7 +454,7 @@ class RecurringRepositoryImpl implements RecurringRepository {
         final DateTime? end = rule.endAt;
         if (end != null && cursor.isAfter(end)) break;
 
-        final DateTime timestamp = DateTime.now();
+        final DateTime timestamp = AppClock.now();
         await _transactionDao.insert(
           TransactionEntity(
             id: IdGenerator.newId(),
@@ -482,7 +483,7 @@ class RecurringRepositoryImpl implements RecurringRepository {
           nextRunAt: cursor,
           lastRunAt: lastRun,
           isActive: !finished,
-          updatedAt: DateTime.now(),
+          updatedAt: AppClock.now(),
         ),
       );
     }

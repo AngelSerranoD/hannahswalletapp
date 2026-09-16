@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/app_clock.dart';
 import 'transaction_entity.dart';
 
 /// Cada cuanto se repite un movimiento automático.
@@ -123,7 +124,7 @@ class RecurringRuleEntity extends Equatable {
       isActive: isActive ?? this.isActive,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? AppClock.now(),
     );
   }
 

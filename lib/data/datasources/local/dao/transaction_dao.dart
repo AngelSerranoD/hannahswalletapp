@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../core/utils/date_range.dart';
 import '../../../../domain/entities/transaction_entity.dart';
 import '../../../models/entity_mappers.dart';
@@ -141,7 +142,7 @@ class TransactionDao {
       DatabaseSchema.tableTransactions,
       <String, Object?>{
         'is_deleted': 1,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -154,7 +155,7 @@ class TransactionDao {
       DatabaseSchema.tableTransactions,
       <String, Object?>{
         'is_deleted': 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -165,7 +166,7 @@ class TransactionDao {
   /// Lo llama Ajustes; no se ejecuta solo, para que "Deshacer" siempre exista.
   Future<int> purgeDeleted({int olderThanDays = 30}) async {
     final Database db = await _provider.database();
-    final int cutoff = DateTime.now()
+    final int cutoff = AppClock.now()
         .subtract(Duration(days: olderThanDays))
         .millisecondsSinceEpoch;
     return db.delete(

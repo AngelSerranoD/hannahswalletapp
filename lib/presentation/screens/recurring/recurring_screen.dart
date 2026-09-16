@@ -3,9 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
-import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/money.dart';
@@ -200,7 +201,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
     _type = e?.type ?? TransactionType.expense;
     _frequency = e?.frequency ?? RecurrenceFrequency.monthly;
     _interval = e?.intervalCount ?? 1;
-    _nextRun = e?.nextRunAt ?? DateTime.now().add(const Duration(days: 1));
+    _nextRun = e?.nextRunAt ?? AppClock.now().add(const Duration(days: 1));
     _walletId = e?.walletId;
     _categoryId = e?.categoryId;
   }
@@ -382,7 +383,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
       context: context,
       initialDate: _nextRun,
       firstDate: DateTime(2000),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+      lastDate: AppClock.now().add(const Duration(days: 365 * 10)),
       locale: const Locale('es', 'ES'),
     );
     if (picked != null) setState(() => _nextRun = picked);
@@ -400,7 +401,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
       return;
     }
 
-    final DateTime now = DateTime.now();
+    final DateTime now = AppClock.now();
     final String note = _note.text.trim();
 
     final RecurringRuleEntity rule = RecurringRuleEntity(

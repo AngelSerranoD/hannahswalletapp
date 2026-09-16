@@ -10,6 +10,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_clock.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/money.dart';
 import '../../../data/backend/app_backend.dart';
@@ -757,7 +758,7 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
     try {
       final String json = await ref.read(backupProvider).exportToJsonString();
       final String name =
-          'hannahs-wallet-${AppDates.fileStamp(DateTime.now())}.json';
+          'hannahs-wallet-${AppDates.fileStamp(AppClock.now())}.json';
 
       if (!mounted) return;
 
@@ -776,7 +777,7 @@ class _BackupSectionState extends ConsumerState<_BackupSection> {
           ],
           fileNameOverrides: <String>[name],
           subject: 'Copia de ${AppConstants.appName} '
-              '(${AppDates.shortDate(DateTime.now())})',
+              '(${AppDates.shortDate(AppClock.now())})',
           text: 'Copia de seguridad de ${AppConstants.appName}.',
         ),
       );

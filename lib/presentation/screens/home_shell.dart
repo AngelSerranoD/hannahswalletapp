@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/providers.dart';
 import '../../core/i18n/cjk_font_loader.dart';
+import '../../core/utils/app_clock.dart';
 import '../../core/utils/date_range.dart';
 import '../../domain/entities/category_entity.dart';
 import '../../domain/entities/transaction_entity.dart';
@@ -87,7 +88,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             ? Future<List<TransactionView>>.value(const <TransactionView>[])
             : ref.read(transactionRepositoryProvider).getInRange(DateRange(
                   earliest,
-                  DateTime.now().add(const Duration(days: 3660)),
+                  AppClock.now().add(const Duration(days: 3660)),
                 )),
       ).wait;
 

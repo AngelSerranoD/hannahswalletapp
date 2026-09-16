@@ -1,5 +1,6 @@
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import '../../../../core/utils/app_clock.dart';
 import '../../../../domain/entities/recurring_rule_entity.dart';
 import '../../../models/entity_mappers.dart';
 import '../database_provider.dart';
@@ -75,7 +76,7 @@ class RecurringDao {
       <String, Object?>{
         'is_deleted': 1,
         'is_active': 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -88,7 +89,7 @@ class RecurringDao {
       DatabaseSchema.tableRecurringRules,
       <String, Object?>{
         'is_active': active ? 1 : 0,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': AppClock.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/utils/app_clock.dart';
 import 'transaction_entity.dart';
 
 /// Categoría de gasto o de ingreso.
@@ -54,7 +55,7 @@ class CategoryEntity extends Equatable {
       isSystem: isSystem,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? AppClock.now(),
     );
   }
 
