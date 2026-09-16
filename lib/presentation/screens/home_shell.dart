@@ -43,17 +43,27 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
+  Timer? _cjkScan;
+
   @override
   void initState() {
     super.initState();
     // Con margen tras el primer frame, para no competir con las consultas de
-    // la pantalla que se está abriendo.
+    // la pantalla que se está abriendo. Es un `Timer` y no un
+    // `Future.delayed` para poder cancelarlo si la bóveda se bloquea antes.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(Future<void>.delayed(
+      if (!mounted) return;
+      _cjkScan = Timer(
         const Duration(seconds: 2),
-        _loadCjkFontIfDataNeedsIt,
-      ));
+        () => unawaited(_loadCjkFontIfDataNeedsIt()),
+      );
     });
+  }
+
+  @override
+  void dispose() {
+    _cjkScan?.cancel();
+    super.dispose();
   }
 
   /// Carga la fuente china solo si algún nombre o nota guardada la necesita.

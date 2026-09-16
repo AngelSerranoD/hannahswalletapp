@@ -12,7 +12,14 @@ import 'app_backend.dart';
 import 'web/biometric_unlock.dart';
 import 'web/vault_data.dart';
 import 'web/vault_envelope.dart';
-import 'web/vault_repositories.dart';
+import 'web/repositories/vault_session.dart';
+import 'web/repositories/vault_wallet_repository.dart';
+import 'web/repositories/vault_category_repository.dart';
+import 'web/repositories/vault_transaction_repository.dart';
+import 'web/repositories/vault_budget_repository.dart';
+import 'web/repositories/vault_analytics_repository.dart';
+import 'web/repositories/vault_settings_repository.dart';
+import 'web/repositories/vault_recurring_repository.dart';
 import 'web/vault_store.dart';
 
 /// Backend de la PWA: bóveda cifrada sobre IndexedDB.
