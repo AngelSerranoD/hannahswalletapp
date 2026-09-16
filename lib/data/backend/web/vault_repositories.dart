@@ -816,35 +816,55 @@ abstract final class VaultQueries {
     if (starts.isEmpty) return const <SeriesBucket>[];
 
     final DateTime now = DateTime.now();
-    final List<TransactionEntity> live = liveTransactions(d).toList(growable: false);
+    final List<DateTime> ends = starts
+        .map((DateTime start) => _bucketEnd(period, start))
+        .toList(growable: false);
+    final List<int> income = List<int>.filled(starts.length, 0);
+    final List<int> expense = List<int>.filled(starts.length, 0);
 
-    return starts.map((DateTime start) {
-      final DateTime end = _bucketEnd(period, start);
-      int income = 0;
-      int expense = 0;
-
-      for (final TransactionEntity t in live) {
-        if (t.occurredAt.isBefore(start) || !t.occurredAt.isBefore(end)) {
-          continue;
-        }
-        switch (t.type) {
-          case TransactionType.income:
-            income += t.amountCents;
-          case TransactionType.expense:
-            expense += t.amountCents;
-          case TransactionType.transfer:
-            break;
-        }
+    // Una sola pasada por el historial: cada movimiento cae en su tramo por
+    // búsqueda binaria. Antes se recorría entero una vez por tramo (hasta 12),
+    // y esto se recalcula tras cada cambio aunque Estadísticas no esté a la
+    // vista.
+    for (final TransactionEntity t in liveTransactions(d)) {
+      if (t.type == TransactionType.transfer) continue;
+      final int i = _bucketIndex(starts, t.occurredAt);
+      if (i < 0 || !t.occurredAt.isBefore(ends[i])) continue;
+      if (t.type == TransactionType.income) {
+        income[i] += t.amountCents;
+      } else {
+        expense[i] += t.amountCents;
       }
+    }
 
-      return SeriesBucket(
-        label: _bucketLabel(period, start),
-        start: start,
-        incomeCents: income,
-        expenseCents: expense,
-        isCurrent: !now.isBefore(start) && now.isBefore(end),
-      );
-    }).toList(growable: false);
+    return <SeriesBucket>[
+      for (int i = 0; i < starts.length; i++)
+        SeriesBucket(
+          label: _bucketLabel(period, starts[i]),
+          start: starts[i],
+          incomeCents: income[i],
+          expenseCents: expense[i],
+          isCurrent: !now.isBefore(starts[i]) && now.isBefore(ends[i]),
+        ),
+    ];
+  }
+
+  /// Último tramo que empieza en [when] o antes; `-1` si es anterior a todos.
+  /// [starts] va en orden ascendente.
+  static int _bucketIndex(List<DateTime> starts, DateTime when) {
+    int low = 0;
+    int high = starts.length - 1;
+    int found = -1;
+    while (low <= high) {
+      final int mid = (low + high) >> 1;
+      if (starts[mid].isAfter(when)) {
+        high = mid - 1;
+      } else {
+        found = mid;
+        low = mid + 1;
+      }
+    }
+    return found;
   }
 
   /// Presupuestos vigentes del mes con su consumo.

@@ -11,7 +11,7 @@ import 'package:hannahswalletapp/domain/services/budget_planner.dart';
 /// Son las que deciden cuánto dinero se enseña como gastado y cuánto queda
 /// libre. Un error aquí no rompe nada visible: simplemente la cifra no cuadra.
 void main() {
-  final DateTime t = DateTime(2026, 9, 1);
+  final DateTime t = DateTime(2026, 9);
   const String sep = '2026-09';
 
   CategoryEntity cat(String id, String name, {int order = 0}) =>
@@ -46,7 +46,7 @@ void main() {
   final Map<String, CategoryEntity> cats = <String, CategoryEntity>{
     'cine': cat('cine', 'Cine', order: 2),
     'bares': cat('bares', 'Bares', order: 1),
-    'super': cat('super', 'Supermercado', order: 0),
+    'super': cat('super', 'Supermercado'),
   };
 
   group('vigencia', () {

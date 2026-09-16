@@ -1,4 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/di/providers.dart';
+import '../../core/i18n/cjk_font_loader.dart';
+import '../../core/utils/date_range.dart';
+import '../../domain/entities/category_entity.dart';
+import '../../domain/entities/transaction_entity.dart';
+import '../../domain/entities/wallet_entity.dart';
 
 import 'budgets/budgets_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -22,14 +32,67 @@ import 'statistics/statistics_screen.dart';
 /// normal seguía repintándose sesenta veces por segundo mientras el usuario
 /// estaba en Ajustes mirando otra cosa. [TickerMode] desconecta las
 /// animaciones de lo que no se ve sin destruir su estado.
-class HomeShell extends StatefulWidget {
+///
+/// Además, al montarse —que es cuando la bóveda ya está abierta— decide si
+/// hace falta la fuente china mirando los textos guardados.
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
+  @override
+  void initState() {
+    super.initState();
+    // Con margen tras el primer frame, para no competir con las consultas de
+    // la pantalla que se está abriendo.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(Future<void>.delayed(
+        const Duration(seconds: 2),
+        _loadCjkFontIfDataNeedsIt,
+      ));
+    });
+  }
+
+  /// Carga la fuente china solo si algún nombre o nota guardada la necesita.
+  ///
+  /// Se recorren todos los movimientos, no los recientes: una nota en chino
+  /// de hace un año también tiene que verse bien al buscarla.
+  Future<void> _loadCjkFontIfDataNeedsIt() async {
+    if (!mounted || CjkFontLoader.isLoaded) return;
+    try {
+      final DateTime? earliest =
+          await ref.read(transactionRepositoryProvider).earliestDate();
+      if (!mounted) return;
+      final (
+        List<CategoryEntity> categories,
+        List<WalletEntity> wallets,
+        List<TransactionView> movements,
+      ) = await (
+        ref.read(categoryRepositoryProvider).getCategories(includeDeleted: true),
+        ref.read(walletRepositoryProvider).getWallets(includeArchived: true),
+        earliest == null
+            ? Future<List<TransactionView>>.value(const <TransactionView>[])
+            : ref.read(transactionRepositoryProvider).getInRange(DateRange(
+                  earliest,
+                  DateTime.now().add(const Duration(days: 3660)),
+                )),
+      ).wait;
+
+      await CjkFontLoader.ensureLoadedFor(<String?>[
+        for (final CategoryEntity c in categories) c.name,
+        for (final WalletEntity w in wallets) w.name,
+        for (final TransactionView t in movements) t.transaction.note,
+      ]);
+    } catch (error) {
+      // Si la bóveda se cierra a medias, no pasa nada: al teclear chino la
+      // fuente se pide igualmente.
+      debugPrint('No se pudo revisar si hace falta la fuente china: $error');
+    }
+  }
+
   int _index = 0;
 
   /// Pestañas ya visitadas. La primera empieza montada.

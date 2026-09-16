@@ -69,6 +69,9 @@ class _BudgetList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Fuera del `itemBuilder`: ese callback corre durante el layout, donde
+    // `ref.watch` no debe usarse.
+    final String currency = ref.watch(currencyProvider);
     return switch (progress) {
       AsyncData<List<BudgetProgress>>(:final List<BudgetProgress> value)
           when value.isEmpty =>
@@ -87,7 +90,7 @@ class _BudgetList extends ConsumerWidget {
           separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (BuildContext context, int index) => BudgetCard(
             progress: value[index],
-            currency: ref.watch(currencyProvider),
+            currency: currency,
             onEdit: () => openBudgetEditor(
               context,
               month: month,

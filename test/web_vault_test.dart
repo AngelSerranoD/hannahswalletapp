@@ -311,6 +311,47 @@ void main() {
     });
   });
 
+  group('serie de estadísticas', () {
+    test('cada movimiento cae en su mes, con los bordes en su sitio', () async {
+      await open();
+      final int year = DateTime.now().year;
+      final String walletId = (await backend.wallets.getWallets()).first.id;
+      final DateTime now = DateTime.now();
+
+      // El primer instante de marzo cuenta en marzo y el último de febrero en
+      // febrero. Lo del año anterior no entra en ningún tramo.
+      await addExpense(cents: 1000, when: DateTime(year, 3));
+      await addExpense(
+        cents: 200,
+        when: DateTime(year, 3).subtract(const Duration(milliseconds: 1)),
+      );
+      await addExpense(cents: 999, when: DateTime(year - 1, 12, 31, 23));
+      await addExpense(cents: 50, when: DateTime(year, 12, 31, 23, 59));
+      await backend.transactions.create(TransactionEntity(
+        id: IdGenerator.newId(),
+        walletId: walletId,
+        type: TransactionType.income,
+        amountCents: 5000,
+        occurredAt: DateTime(year, 3, 15),
+        createdAt: now,
+        updatedAt: now,
+      ));
+
+      final List<SeriesBucket> series = await backend.analytics
+          .getSeries(StatsPeriod.month, DateTime(year, 6));
+
+      expect(series, hasLength(12));
+      expect(series[1].expenseCents, 200);
+      expect(series[2].expenseCents, 1000);
+      expect(series[2].incomeCents, 5000);
+      expect(series[11].expenseCents, 50);
+      expect(
+        series.fold<int>(0, (int sum, SeriesBucket b) => sum + b.expenseCents),
+        1250,
+      );
+    });
+  });
+
   group('presupuestos', () {
     test('la plantilla mensual se hereda en un mes sin presupuesto propio',
         () async {

@@ -81,6 +81,40 @@ void main() {
       ]);
       expect(CjkFontLoader.isLoaded, isTrue);
     });
+
+    test('solo se carga si hay texto que la necesite', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      CjkFontLoader.resetForTest();
+
+      // Son 8 MB que en web congelan la app al procesarlos: quien escribe
+      // solo en español no debe pagarlos.
+      await CjkFontLoader.ensureLoadedFor(
+          <String?>['Cena con Marta', null, 'Nómina · 1.840,00 €']);
+      expect(CjkFontLoader.isLoaded, isFalse);
+
+      await CjkFontLoader.ensureLoadedFor(<String?>['Compra', '晚饭']);
+      expect(CjkFontLoader.isLoaded, isTrue);
+    });
+
+    test('reconoce hanzi, kana y signos de ancho completo', () {
+      expect(CjkFontLoader.containsCjk('Alimentación y ñandú'), isFalse);
+      expect(CjkFontLoader.containsCjk('咖啡'), isTrue);
+      expect(CjkFontLoader.containsCjk('カフェ'), isTrue);
+      expect(CjkFontLoader.containsCjk('50！'), isTrue);
+    });
+
+    test('teclear chino la pide sin alterar lo escrito', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      CjkFontLoader.resetForTest();
+      const TextEditingValue typed = TextEditingValue(text: '房租');
+
+      final TextEditingValue result = const CjkFontTrigger()
+          .formatEditUpdate(TextEditingValue.empty, typed);
+
+      expect(result, typed);
+      await CjkFontLoader.ensureLoaded();
+      expect(CjkFontLoader.isLoaded, isTrue);
+    });
   });
 
   group('los datos en chino', () {

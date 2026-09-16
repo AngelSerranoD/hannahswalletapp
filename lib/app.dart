@@ -8,7 +8,6 @@ import 'core/constants/app_constants.dart';
 import 'core/di/providers.dart';
 import 'core/error/failures.dart';
 import 'core/theme/app_colors.dart';
-import 'core/i18n/cjk_font_loader.dart';
 import 'core/theme/app_theme.dart';
 import 'data/backend/app_backend.dart';
 import 'presentation/providers/auto_lock_provider.dart';
@@ -73,26 +72,6 @@ class _AppGateState extends ConsumerState<_AppGate> {
       // que siga esperando en la ventana de agrupación de escrituras.
       onDetach: () => unawaited(ref.read(backendSessionProvider.notifier).flush()),
     );
-    _warmUpCjkFont();
-  }
-
-  /// Pide la fuente china en cuanto hay algo pintado.
-  ///
-  /// Se lanza DESPUÉS del primer frame y sin `await`: son 8,3 MB y esperarlos
-  /// antes de enseñar nada retrasaría el arranque varios segundos para quien
-  /// no va a escribir un solo carácter chino. Al llegar, Flutter rehace el
-  /// layout y los caracteres aparecen solos.
-  void _warmUpCjkFont() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Tres segundos de margen: son 8 MB, y pedirlos nada mas pintar compite
-      // por el ancho de banda con el motor y el codigo de la app, que si hacen
-      // falta para que se pueda tocar algo. Con este retraso la app ya esta
-      // usable cuando empieza la descarga.
-      unawaited(
-        Future<void>.delayed(const Duration(seconds: 3))
-            .then((_) => CjkFontLoader.ensureLoaded()),
-      );
-    });
   }
 
   void _onPaused() {

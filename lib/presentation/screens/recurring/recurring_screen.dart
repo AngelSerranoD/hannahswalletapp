@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/providers.dart';
+import '../../../core/i18n/cjk_font_loader.dart';
 import '../../../core/error/failures.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_range.dart';
@@ -272,6 +274,7 @@ class _RecurringEditorSheetState extends ConsumerState<RecurringEditorSheet> {
             ),
             const SizedBox(height: 14),
             TextField(
+              inputFormatters: const <TextInputFormatter>[CjkFontTrigger()],
               controller: _note,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
