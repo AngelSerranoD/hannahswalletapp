@@ -115,13 +115,14 @@ abstract final class AppColors {
   static const Color warning = Color(0xFF537043);
   static const Color warningSoft = moss;
 
-  /// Escala de las categorías.
+  /// Colores para categorías y carteras.
   ///
-  /// Los cinco colores de la paleta más un par de mezclas, ordenados para que
-  /// dos vecinos nunca compartan matiz: verde oscuro, rosa, verde noche,
-  /// musgo, verde medio y verde agua. Aquí la distinción es CROMÁTICA y no de
-  /// luminosidad, que es lo que permite tener seis niveles distinguibles en
-  /// una paleta con un solo tono claro.
+  /// Los seis primeros son los de la paleta del estanque y van delante para
+  /// que las categorías ya creadas sigan coincidiendo con una muestra. Solo
+  /// con ellos elegir color apenas servía de nada: cuatro de los seis eran
+  /// verdes y dos categorías "distintas" se confundían en la lista. Los demás
+  /// abren el círculo cromático manteniendo el mismo tono apagado, para que
+  /// convivan con el beige del fondo sin parecer de otra app.
   static const List<int> categoryPalette = <int>[
     0xFF0A3323, // verde oscuro
     0xFFD3968C, // rosa palo
@@ -129,5 +130,27 @@ abstract final class AppColors {
     0xFF839958, // musgo
     0xFF4D6B40, // verde medio
     0xFF789D98, // verde agua
+    0xFFB5543C, // terracota
+    0xFFE07A5F, // coral
+    0xFFD9A441, // mostaza
+    0xFFA67C52, // avellana
+    0xFF7A4E7E, // ciruela
+    0xFFB07BAC, // malva
+    0xFF4A6FA5, // azul pizarra
+    0xFF2A9D8F, // turquesa
+    0xFF6C7A89, // gris azulado
+    0xFF3D3D3D, // grafito
   ];
+
+  /// Tinta o papel, lo que más contraste dé sobre [background].
+  ///
+  /// Se compara el ratio de contraste real (WCAG) con los dos candidatos. El
+  /// umbral fijo de luminancia que había antes (> 0,5) ponía papel sobre el
+  /// musgo y el rosa palo, justo donde esta paleta documenta tinta encima.
+  static Color onBadge(Color background) {
+    final double l = background.computeLuminance();
+    final double withInk = (l + 0.05) / (ink.computeLuminance() + 0.05);
+    final double withPaper = (paper.computeLuminance() + 0.05) / (l + 0.05);
+    return withInk >= withPaper ? ink : paper;
+  }
 }

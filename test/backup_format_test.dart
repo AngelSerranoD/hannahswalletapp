@@ -127,8 +127,9 @@ void main() {
       // Hacia atras SI se admite: es lo que permite restaurar una copia vieja
       // despues de actualizar la app.
       final BackupPreview preview =
-          await service.inspect(buildBackup());
+          await service.inspect(buildBackup(formatVersion: 1));
       expect(preview.formatVersion, 1);
+      expect(AppConstants.backupFormatVersion, greaterThan(1));
     });
   });
 

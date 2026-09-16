@@ -132,6 +132,27 @@ final FutureProviderFamily<List<CategoryEntity>, TransactionType?>
 final StateProvider<DateTime> budgetMonthProvider =
     StateProvider<DateTime>((Ref ref) => DateTime.now());
 
+/// Todos los presupuestos vivos, de cualquier mes. El editor los necesita para
+/// saber qué categorías ya están en otro límite con la misma vigencia.
+final FutureProvider<List<BudgetEntity>> budgetsProvider =
+    FutureProvider<List<BudgetEntity>>((Ref ref) async {
+  ref.watch(dataRevisionProvider);
+  return ref.watch(budgetRepositoryProvider).getAll();
+});
+
+/// Categorías por id, borradas incluidas: un límite puede seguir teniendo una
+/// categoría que ya no se ofrece al anotar.
+final FutureProvider<Map<String, CategoryEntity>> categoriesByIdProvider =
+    FutureProvider<Map<String, CategoryEntity>>((Ref ref) async {
+  ref.watch(dataRevisionProvider);
+  final List<CategoryEntity> all = await ref
+      .watch(categoryRepositoryProvider)
+      .getCategories(includeDeleted: true);
+  return <String, CategoryEntity>{
+    for (final CategoryEntity c in all) c.id: c,
+  };
+});
+
 final FutureProviderFamily<List<BudgetProgress>, DateTime>
     budgetProgressProvider =
     FutureProvider.family<List<BudgetProgress>, DateTime>(

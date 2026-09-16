@@ -6,11 +6,11 @@ abstract final class AppConstants {
   static const String databaseFileName = 'hannahs_wallet.db';
 
   /// Versión del esquema SQLite. Subir SIEMPRE que se toque [DatabaseProvider].
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 
   /// Versión del formato del backup JSON. Independiente del esquema SQLite:
   /// permite migrar backups antiguos sin tocar la base.
-  static const int backupFormatVersion = 1;
+  static const int backupFormatVersion = 2;
 
   /// Marca que identifica un JSON como backup legitimo de esta app.
   static const String backupMagic = 'hannahs_wallet_backup';

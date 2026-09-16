@@ -70,7 +70,6 @@ abstract interface class BudgetRepository {
   Future<BudgetProgress?> getGlobalProgress(DateTime month);
   Future<void> save(BudgetEntity budget);
   Future<void> softDelete(String id);
-  Future<Set<String?>> occupiedCategoryIds(DateTime month);
 }
 
 abstract interface class AnalyticsRepository {

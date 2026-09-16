@@ -94,9 +94,15 @@ abstract final class DatabaseSchema {
       CHECK (transfer_wallet_id IS NULL OR transfer_wallet_id <> wallet_id)
     )
     ''',
+    // `category_ids` guarda las categorías del límite separadas por comas.
+    // `category_id` es el formato anterior, de una sola categoría: ya no se
+    // escribe, pero sigue existiendo para poder restaurar copias antiguas, que
+    // traen esa columna en cada fila.
     '''
     CREATE TABLE budgets (
       id           TEXT    PRIMARY KEY,
+      name         TEXT,
+      category_ids TEXT,
       category_id  TEXT    REFERENCES categories (id) ON DELETE CASCADE,
       month_key    TEXT,
       limit_cents  INTEGER NOT NULL CHECK (limit_cents > 0),
@@ -126,19 +132,23 @@ abstract final class DatabaseSchema {
     'CREATE INDEX idx_categories_live ON categories (is_deleted, type, sort_order)',
     'CREATE INDEX idx_budgets_month ON budgets (month_key, is_deleted)',
     'CREATE INDEX idx_recurring_due ON recurring_rules (is_active, is_deleted, next_run_at)',
-
-    // Unicidad lógica de presupuestos: como máximo un presupuesto vivo por
-    // (categoría, mes). El índice es PARCIAL (`WHERE is_deleted = 0`) para que
-    // los presupuestos borrados no bloqueen la creacion de uno nuevo igual.
-    // `COALESCE` mapea los NULL (presupuesto global / plantilla mensual) a un
-    // centinela, porque en SQL dos NULL no son iguales entre si y el índice
-    // único dejaria colar duplicados.
-    '''
-    CREATE UNIQUE INDEX idx_budget_unique
-      ON budgets (COALESCE(category_id, '@global'), COALESCE(month_key, '@every'))
-      WHERE is_deleted = 0
-    ''',
   ];
+
+  /// Migraciones por versión: la clave es la versión a la que llevan.
+  ///
+  /// Versión 2 — límites con nombre y varias categorías. El índice único por
+  /// `(category_id, mes)` desaparece porque un límite ya no tiene UNA
+  /// categoría: esa regla la aplica ahora `BudgetPlanner.prepareSave`, que
+  /// además sabe explicar el conflicto en vez de fallar con un error de SQL.
+  static const Map<int, List<String>> migrations = <int, List<String>>{
+    2: <String>[
+      'ALTER TABLE budgets ADD COLUMN name TEXT',
+      'ALTER TABLE budgets ADD COLUMN category_ids TEXT',
+      'UPDATE budgets SET category_ids = category_id, category_id = NULL '
+          'WHERE category_id IS NOT NULL',
+      'DROP INDEX IF EXISTS idx_budget_unique',
+    ],
+  };
 
   /// Saldo acumulado histórico de TODAS las carteras activas.
   ///

@@ -168,7 +168,8 @@ TransactionView transactionViewFromJoin(Map<String, Object?> m) =>
 
 BudgetEntity budgetFromMap(Map<String, Object?> m) => BudgetEntity(
       id: m['id']! as String,
-      categoryId: asStringOrNull(m['category_id']),
+      name: asStringOrNull(m['name']),
+      categoryIds: _budgetCategoryIds(m),
       monthKey: asStringOrNull(m['month_key']),
       limitCents: asInt(m['limit_cents']),
       isDeleted: asBool(m['is_deleted']),
@@ -176,10 +177,28 @@ BudgetEntity budgetFromMap(Map<String, Object?> m) => BudgetEntity(
       updatedAt: asDate(m['updated_at']),
     );
 
+/// Categorías de un presupuesto, venga del formato que venga.
+///
+/// Las filas nuevas traen `category_ids` ("id1,id2"). Las anteriores a los
+/// límites con varias categorías solo tienen `category_id`, y así llegan
+/// todavía desde copias antiguas y bóvedas web sin migrar: se leen como una
+/// lista de uno. Los UUID no contienen comas, así que la coma es un separador
+/// seguro y la misma columna TEXT sirve en SQLite y en el JSON.
+List<String> _budgetCategoryIds(Map<String, Object?> m) {
+  final Object? raw = m['category_ids'];
+  if (raw is List) return raw.map((Object? e) => e.toString()).toList();
+  if (raw is String) {
+    return raw.split(',').where((String id) => id.isNotEmpty).toList();
+  }
+  final String? legacy = asStringOrNull(m['category_id']);
+  return legacy == null ? const <String>[] : <String>[legacy];
+}
+
 extension BudgetMapper on BudgetEntity {
   Map<String, Object?> toMap() => <String, Object?>{
         'id': id,
-        'category_id': categoryId,
+        'name': name,
+        'category_ids': categoryIds.isEmpty ? null : categoryIds.join(','),
         'month_key': monthKey,
         'limit_cents': limitCents,
         'is_deleted': b(isDeleted),

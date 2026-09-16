@@ -181,7 +181,8 @@ void main() {
     await tester.tap(find.text('Nuevo límite'));
     await settle(tester, rounds: 8);
 
-    await tester.enterText(find.byType(TextField).first, '50');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Límite mensual'), '50');
     await settle(tester, rounds: 4);
 
     // El panel se desplaza: sin esto el toque caería fuera de la pantalla y
@@ -209,5 +210,69 @@ void main() {
     expect(find.text('Casi sin margen'), findsOneWidget,
         reason: 'Al pasar del 90 % del presupuesto la mascota debe alarmarse');
     expect(find.textContaining('92 %'), findsWidgets);
+  });
+
+  testWidgets('un límite con nombre agrupa categorías y descuenta del total',
+      (WidgetTester tester) async {
+    await launch(tester);
+
+    await tester.enterText(find.byType(TextField).first, pass);
+    await tester.enterText(find.byType(TextField).at(1), pass);
+    await tester.tap(find.text('Lo entiendo'));
+    await settle(tester, rounds: 4);
+    await tester.tap(find.text('Crear bóveda'));
+    await settle(tester, rounds: 16);
+
+    await tester.tap(find.byIcon(Icons.savings_outlined).first);
+    await settle(tester, rounds: 8);
+
+    Future<void> tapVisible(Finder finder) async {
+      await tester.ensureVisible(finder);
+      await settle(tester, rounds: 2);
+      await tester.tap(finder);
+      await settle(tester, rounds: 8);
+    }
+
+    // Total del mes: 500 EUR.
+    await tester.tap(find.text('Nuevo límite'));
+    await settle(tester, rounds: 8);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Límite mensual'), '500');
+    await tapVisible(find.text('Guardar'));
+
+    // "Finde": 120 EUR entre Restaurantes, Ocio y una categoría creada aquí.
+    await tester.tap(find.text('Nuevo límite'));
+    await settle(tester, rounds: 8);
+    await tester.tap(find.text('Categorías'));
+    await settle(tester, rounds: 4);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Límite mensual'), '120');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Nombre (opcional)'), 'Finde');
+    await settle(tester, rounds: 4);
+    await tapVisible(find.text('Restaurantes'));
+    await tapVisible(find.text('Ocio'));
+
+    await tapVisible(find.text('Nueva categoría'));
+    await tester.enterText(find.widgetWithText(TextField, 'Nombre'), 'Conciertos');
+    await settle(tester, rounds: 4);
+    // Hay dos "Guardar": el de la categoría es el de la hoja de encima.
+    await tapVisible(find.text('Guardar').last);
+    expect(find.text('Conciertos'), findsOneWidget,
+        reason: 'La categoría nueva entra ya marcada en el límite');
+
+    await tapVisible(find.text('Guardar'));
+
+    expect(find.text('Finde'), findsOneWidget);
+    expect(find.textContaining('Restaurantes, Ocio y Conciertos'), findsOneWidget);
+    expect(find.textContaining('380,00'), findsWidgets,
+        reason: 'El total de 500 menos los 120 del límite');
+
+    // Otra vez: Ocio ya está en "Finde" y no se puede meter en otro límite.
+    await tester.tap(find.text('Nuevo límite'));
+    await settle(tester, rounds: 8);
+    await tester.tap(find.text('Categorías'));
+    await settle(tester, rounds: 4);
+    expect(find.text('Ocio · en Finde'), findsOneWidget);
   });
 }

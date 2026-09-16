@@ -13,6 +13,7 @@ import '../../../domain/entities/recurring_rule_entity.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/entities/wallet_entity.dart';
 import '../../../domain/repositories/repositories.dart';
+import '../../../domain/services/budget_planner.dart';
 import '../../datasources/local/data_change_bus.dart';
 import 'vault_data.dart';
 
@@ -434,37 +435,19 @@ class VaultBudgetRepository implements BudgetRepository {
       VaultQueries.budgetProgress(_d, month);
 
   @override
-  Future<BudgetProgress?> getGlobalProgress(DateTime month) async {
-    for (final BudgetProgress p in VaultQueries.budgetProgress(_d, month)) {
-      if (p.budget.isGlobal) return p;
-    }
-    return null;
-  }
+  Future<BudgetProgress?> getGlobalProgress(DateTime month) async =>
+      VaultQueries.budgetProgress(_d, month)
+          .where((BudgetProgress p) => p.budget.isGlobal)
+          .firstOrNull;
 
   @override
   Future<void> save(BudgetEntity budget) async {
-    if (budget.limitCents <= 0) {
-      throw const ValidationFailure('El límite debe ser mayor que cero.');
-    }
-
-    // Equivale al índice único parcial de SQLite: como máximo un presupuesto
-    // vivo por pareja (categoría, mes).
-    final BudgetEntity? duplicate = _d.budgets.values.cast<BudgetEntity?>().firstWhere(
-          (BudgetEntity? b) =>
-              b != null &&
-              !b.isDeleted &&
-              b.id != budget.id &&
-              b.categoryId == budget.categoryId &&
-              b.monthKey == budget.monthKey,
-          orElse: () => null,
-        );
-
-    if (duplicate != null) {
-      _d.budgets[duplicate.id] =
-          duplicate.copyWith(limitCents: budget.limitCents);
-    } else {
-      _d.budgets[budget.id] = budget;
-    }
+    final BudgetEntity prepared = BudgetPlanner.prepareSave(
+      budget,
+      existing: _d.budgets.values,
+      categories: _d.categories,
+    );
+    _d.budgets[prepared.id] = prepared;
     _session.touch();
   }
 
@@ -475,12 +458,6 @@ class VaultBudgetRepository implements BudgetRepository {
     _d.budgets[id] = b.copyWith(isDeleted: true);
     _session.touch();
   }
-
-  @override
-  Future<Set<String?>> occupiedCategoryIds(DateTime month) async =>
-      VaultQueries.budgetProgress(_d, month)
-          .map((BudgetProgress p) => p.budget.categoryId)
-          .toSet();
 }
 
 // ----------------------------------------------------------- Estadísticas
@@ -872,68 +849,23 @@ abstract final class VaultQueries {
 
   /// Presupuestos vigentes del mes con su consumo.
   ///
-  /// Reproduce la herencia del `NOT EXISTS` de la consulta SQL: para cada
-  /// categoría (y para el global) manda el presupuesto puntual del mes y, si no
-  /// lo hay, la plantilla que se repite todos los meses.
+  /// Aquí solo se reúne el gasto; qué presupuesto manda lo decide
+  /// `BudgetPlanner`, el mismo que usa la versión nativa.
   static List<BudgetProgress> budgetProgress(VaultData d, DateTime month) {
     final DateRange range = DateRange.monthOf(month);
-    final String key = range.monthKey;
-
-    final List<BudgetEntity> live = d.budgets.values
-        .where((BudgetEntity b) => !b.isDeleted)
-        .toList(growable: false);
-
-    // Primero los puntuales del mes; después las plantillas que no tengan un
-    // puntual para su misma categoría.
-    final Map<String, BudgetEntity> effective = <String, BudgetEntity>{};
-    for (final BudgetEntity b in live) {
-      if (b.monthKey == key) {
-        effective[b.categoryId ?? '@global'] = b;
-      }
-    }
-    for (final BudgetEntity b in live) {
-      if (b.monthKey == null) {
-        effective.putIfAbsent(b.categoryId ?? '@global', () => b);
-      }
-    }
-
-    // Gasto del mes por categoría, calculado una sola vez.
-    int globalSpent = 0;
-    final Map<String, int> byCategory = <String, int>{};
+    final Map<String?, int> spent = <String?, int>{};
     for (final TransactionEntity t in liveTransactions(d)) {
       if (t.type != TransactionType.expense) continue;
       if (!range.contains(t.occurredAt)) continue;
-      globalSpent += t.amountCents;
-      final String? cat = t.categoryId;
-      if (cat != null) {
-        byCategory[cat] = (byCategory[cat] ?? 0) + t.amountCents;
-      }
+      spent[t.categoryId] = (spent[t.categoryId] ?? 0) + t.amountCents;
     }
 
-    final List<BudgetProgress> result = effective.values.map((BudgetEntity b) {
-      final CategoryEntity? c =
-          b.categoryId == null ? null : d.categories[b.categoryId];
-      return BudgetProgress(
-        budget: b,
-        spentCents:
-            b.categoryId == null ? globalSpent : (byCategory[b.categoryId] ?? 0),
-        monthKey: key,
-        categoryName: c?.name,
-        categoryIconCode: c?.iconCode,
-        categoryColor: c?.colorValue,
-      );
-    }).toList()
-      ..sort((BudgetProgress a, BudgetProgress b) {
-        // El global primero, luego por orden de categoría.
-        if (a.budget.isGlobal != b.budget.isGlobal) {
-          return a.budget.isGlobal ? -1 : 1;
-        }
-        final int ao = d.categories[a.budget.categoryId]?.sortOrder ?? 9999;
-        final int bo = d.categories[b.budget.categoryId]?.sortOrder ?? 9999;
-        return ao.compareTo(bo);
-      });
-
-    return result;
+    return BudgetPlanner.progress(
+      budgets: d.budgets.values,
+      categories: d.categories,
+      spentByCategory: spent,
+      monthKey: range.monthKey,
+    );
   }
 
   // --- Ayudas de los intervalos de la serie ---

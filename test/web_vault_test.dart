@@ -398,7 +398,7 @@ void main() {
 
       await backend.budgets.save(BudgetEntity(
         id: IdGenerator.newId(),
-        categoryId: ids[0],
+        categoryIds: <String>[ids[0]],
         limitCents: 20000,
         createdAt: now,
         updatedAt: now,

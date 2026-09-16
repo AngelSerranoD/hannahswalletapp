@@ -132,39 +132,39 @@ class NativeBackend implements AppBackend {
   @override
   Future<void> flush() => _database.checkpoint();
 
+  // Los repositorios se crean una vez por backend. Como getters creaban un
+  // repositorio y un DAO nuevos en cada acceso, y la app accede muchas veces.
   @override
-  WalletRepository get wallets =>
+  late final WalletRepository wallets =
       WalletRepositoryImpl(WalletDao(_database), _bus);
 
-  @override
-  CategoryRepository get categories =>
-      CategoryRepositoryImpl(CategoryDao(_database), _bus);
+  late final CategoryDao _categoryDao = CategoryDao(_database);
+  late final TransactionDao _transactionDao = TransactionDao(_database);
+  late final SettingsDao _settingsDao = SettingsDao(_database);
 
   @override
-  TransactionRepository get transactions =>
-      TransactionRepositoryImpl(TransactionDao(_database), _bus);
+  late final CategoryRepository categories =
+      CategoryRepositoryImpl(_categoryDao, _bus);
 
   @override
-  BudgetRepository get budgets =>
-      BudgetRepositoryImpl(BudgetDao(_database), _bus);
+  late final TransactionRepository transactions =
+      TransactionRepositoryImpl(_transactionDao, _bus);
 
   @override
-  AnalyticsRepository get analytics => AnalyticsRepositoryImpl(
-        AnalyticsDao(_database),
-        BudgetDao(_database),
-        SettingsDao(_database),
-      );
+  late final BudgetRepository budgets =
+      BudgetRepositoryImpl(BudgetDao(_database), _categoryDao, _bus);
 
   @override
-  SettingsRepository get settings =>
-      SettingsRepositoryImpl(SettingsDao(_database), _bus);
+  late final AnalyticsRepository analytics =
+      AnalyticsRepositoryImpl(AnalyticsDao(_database), budgets, _settingsDao);
 
   @override
-  RecurringRepository get recurring => RecurringRepositoryImpl(
-        RecurringDao(_database),
-        TransactionDao(_database),
-        _bus,
-      );
+  late final SettingsRepository settings =
+      SettingsRepositoryImpl(_settingsDao, _bus);
+
+  @override
+  late final RecurringRepository recurring =
+      RecurringRepositoryImpl(RecurringDao(_database), _transactionDao, _bus);
 
   @override
   BackupPort get backup => _NativeBackupPort(BackupService(_database, _bus));

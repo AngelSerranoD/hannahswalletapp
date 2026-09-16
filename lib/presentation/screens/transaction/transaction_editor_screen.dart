@@ -10,7 +10,7 @@ import '../../../core/utils/date_range.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/money.dart';
 import '../../../domain/entities/category_entity.dart';
-import '../categories/categories_screen.dart';
+import '../categories/category_editor_sheet.dart';
 import '../../../domain/entities/transaction_entity.dart';
 import '../../../domain/entities/wallet_entity.dart';
 import '../../providers/app_settings_provider.dart';
@@ -453,11 +453,7 @@ class _CategoryPicker extends StatelessWidget {
 
   /// Abre el editor de categorías y selecciona la que se cree.
   Future<void> _createCategory(BuildContext context) async {
-    final String? createdId = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => CategoryEditorSheet(type: type),
-    );
+    final String? createdId = await openCategoryEditor(context, type: type);
     if (createdId != null) onSelected(createdId);
   }
 

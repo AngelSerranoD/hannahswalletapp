@@ -188,10 +188,7 @@ class IconBadge extends StatelessWidget {
         ? IconCatalog.resolve(iconCode!)
         : (fallbackIcon ?? IconCatalog.fallback);
 
-    // `computeLuminance` decide si el icono va claro u oscuro. El umbral 0,5
-    // es el punto en que el blanco deja de contrastar mejor que el negro.
-    final Color foreground =
-        badge.computeLuminance() > 0.5 ? AppColors.ink : AppColors.paper;
+    final Color foreground = AppColors.onBadge(badge);
 
     return Container(
       width: size,

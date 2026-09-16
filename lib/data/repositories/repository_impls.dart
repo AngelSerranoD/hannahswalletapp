@@ -9,6 +9,7 @@ import '../../domain/entities/recurring_rule_entity.dart';
 import '../../domain/entities/transaction_entity.dart';
 import '../../domain/entities/wallet_entity.dart';
 import '../../domain/repositories/repositories.dart';
+import '../../domain/services/budget_planner.dart';
 import '../datasources/local/dao/analytics_dao.dart';
 import '../datasources/local/dao/budget_dao.dart';
 import '../datasources/local/dao/category_dao.dart';
@@ -239,28 +240,51 @@ class TransactionRepositoryImpl implements TransactionRepository {
 }
 
 class BudgetRepositoryImpl implements BudgetRepository {
-  BudgetRepositoryImpl(this._dao, this._bus);
+  BudgetRepositoryImpl(this._dao, this._categoryDao, this._bus);
 
   final BudgetDao _dao;
+  final CategoryDao _categoryDao;
   final DataChangeBus _bus;
 
   @override
   Future<List<BudgetEntity>> getAll() => _dao.findAll();
 
   @override
-  Future<List<BudgetProgress>> getProgressForMonth(DateTime month) =>
-      _dao.progressForMonth(month);
+  Future<List<BudgetProgress>> getProgressForMonth(DateTime month) async {
+    final DateRange range = DateRange.monthOf(month);
+    final (
+      List<BudgetEntity> budgets,
+      Map<String, CategoryEntity> categories,
+      Map<String?, int> spent,
+    ) = await (
+      _dao.findAll(),
+      _categoriesById(),
+      _dao.spentByCategory(range),
+    ).wait;
+
+    return BudgetPlanner.progress(
+      budgets: budgets,
+      categories: categories,
+      spentByCategory: spent,
+      monthKey: range.monthKey,
+    );
+  }
 
   @override
-  Future<BudgetProgress?> getGlobalProgress(DateTime month) =>
-      _dao.globalProgressForMonth(month);
+  Future<BudgetProgress?> getGlobalProgress(DateTime month) async {
+    final List<BudgetProgress> all = await getProgressForMonth(month);
+    return all.where((BudgetProgress p) => p.budget.isGlobal).firstOrNull;
+  }
 
   @override
   Future<void> save(BudgetEntity budget) async {
-    if (budget.limitCents <= 0) {
-      throw const ValidationFailure('El límite debe ser mayor que cero.');
-    }
-    await _dao.upsert(budget);
+    final (List<BudgetEntity> existing, Map<String, CategoryEntity> categories) =
+        await (_dao.findAll(), _categoriesById()).wait;
+    await _dao.upsert(BudgetPlanner.prepareSave(
+      budget,
+      existing: existing,
+      categories: categories,
+    ));
     _bus.notify();
   }
 
@@ -270,16 +294,20 @@ class BudgetRepositoryImpl implements BudgetRepository {
     _bus.notify();
   }
 
-  @override
-  Future<Set<String?>> occupiedCategoryIds(DateTime month) =>
-      _dao.occupiedCategoryIds(month);
+  /// Todas, borradas incluidas: un límite conserva sus categorías retiradas.
+  Future<Map<String, CategoryEntity>> _categoriesById() async =>
+      <String, CategoryEntity>{
+        for (final CategoryEntity c
+            in await _categoryDao.findAll(includeDeleted: true))
+          c.id: c,
+      };
 }
 
 class AnalyticsRepositoryImpl implements AnalyticsRepository {
-  AnalyticsRepositoryImpl(this._dao, this._budgetDao, this._settingsDao);
+  AnalyticsRepositoryImpl(this._dao, this._budgets, this._settingsDao);
 
   final AnalyticsDao _dao;
-  final BudgetDao _budgetDao;
+  final BudgetRepository _budgets;
   final SettingsDao _settingsDao;
 
   @override
@@ -313,7 +341,7 @@ class AnalyticsRepositoryImpl implements AnalyticsRepository {
     final List<Object?> results = await Future.wait<Object?>(<Future<Object?>>[
       _dao.lifetimeBalance(),
       _dao.totalsForRange(month),
-      _budgetDao.globalProgressForMonth(now),
+      _budgets.getGlobalProgress(now),
       _settingsDao.read(AppConstants.kCurrencyCode),
     ]);
 

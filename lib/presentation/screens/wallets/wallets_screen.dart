@@ -11,6 +11,7 @@ import '../../../domain/entities/wallet_entity.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../providers/data_providers.dart';
 import '../../widgets/common.dart';
+import '../../widgets/pickers.dart';
 
 /// Carteras (efectivo, banco, tarjeta...) con su saldo calculado.
 class WalletsScreen extends ConsumerWidget {
@@ -211,7 +212,7 @@ class _WalletEditorSheetState extends ConsumerState<WalletEditorSheet> {
             const SizedBox(height: 20),
             Text('Icono', style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
-            _IconGrid(
+            IconPickerGrid(
               icons: IconCatalog.walletIcons,
               selected: _iconCode,
               color: Color(_colorValue),
@@ -220,7 +221,7 @@ class _WalletEditorSheetState extends ConsumerState<WalletEditorSheet> {
             const SizedBox(height: 20),
             Text('Color', style: theme.textTheme.titleMedium),
             const SizedBox(height: 10),
-            _ColorGrid(
+            ColorPickerGrid(
               selected: _colorValue,
               onSelected: (int value) => setState(() => _colorValue = value),
             ),
@@ -328,133 +329,4 @@ class _WalletEditorSheetState extends ConsumerState<WalletEditorSheet> {
       setState(() => _error = failure.message);
     }
   }
-}
-
-/// Rejilla de iconos seleccionables.
-class _IconGrid extends StatelessWidget {
-  const _IconGrid({
-    required this.icons,
-    required this.selected,
-    required this.color,
-    required this.onSelected,
-  });
-
-  final List<IconData> icons;
-  final int selected;
-  final Color color;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: icons.map((IconData icon) {
-        final bool isSelected = icon.codePoint == selected;
-        return InkWell(
-          onTap: () => onSelected(icon.codePoint),
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? color.withValues(alpha: 0.18)
-                  : scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isSelected ? color : Colors.transparent,
-                width: 1.8,
-              ),
-            ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: isSelected ? color : scheme.onSurfaceVariant,
-            ),
-          ),
-        );
-      }).toList(growable: false),
-    );
-  }
-}
-
-/// Rejilla de colores de la paleta de la app.
-class _ColorGrid extends StatelessWidget {
-  const _ColorGrid({required this.selected, required this.onSelected});
-
-  final int selected;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: AppColors.categoryPalette.map((int value) {
-        final bool isSelected = value == selected;
-        return InkWell(
-          onTap: () => onSelected(value),
-          customBorder: const CircleBorder(),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Color(value),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Colors.transparent,
-                width: 2.4,
-              ),
-            ),
-            child: isSelected
-                ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
-                : null,
-          ),
-        );
-      }).toList(growable: false),
-    );
-  }
-}
-
-/// Reutilizables desde la pantalla de categorías.
-class IconPickerGrid extends StatelessWidget {
-  const IconPickerGrid({
-    required this.icons,
-    required this.selected,
-    required this.color,
-    required this.onSelected,
-    super.key,
-  });
-
-  final List<IconData> icons;
-  final int selected;
-  final Color color;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) => _IconGrid(
-        icons: icons,
-        selected: selected,
-        color: color,
-        onSelected: onSelected,
-      );
-}
-
-class ColorPickerGrid extends StatelessWidget {
-  const ColorPickerGrid({
-    required this.selected,
-    required this.onSelected,
-    super.key,
-  });
-
-  final int selected;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) =>
-      _ColorGrid(selected: selected, onSelected: onSelected);
 }

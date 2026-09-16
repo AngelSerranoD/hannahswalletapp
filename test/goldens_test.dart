@@ -279,9 +279,12 @@ Future<AppBackend> _seededBackend() async {
     createdAt: today,
     updatedAt: today,
   ));
+  // Un límite con nombre propio y dos categorías: la tarjeta se titula con el
+  // nombre, lleva el icono genérico y enumera sus categorías debajo.
   await backend.budgets.save(BudgetEntity(
     id: IdGenerator.newId(),
-    categoryId: expenses[0].id,
+    name: 'Casa',
+    categoryIds: <String>[expenses[0].id, expenses[3].id],
     limitCents: 30000,
     createdAt: today,
     updatedAt: today,
@@ -292,7 +295,7 @@ Future<AppBackend> _seededBackend() async {
   // Sin él, la captura no probaría justamente lo más fácil de romper.
   await backend.budgets.save(BudgetEntity(
     id: IdGenerator.newId(),
-    categoryId: expenses[1].id,
+    categoryIds: <String>[expenses[1].id],
     limitCents: 1000,
     createdAt: today,
     updatedAt: today,

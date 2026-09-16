@@ -126,20 +126,20 @@ class DatabaseProvider {
     });
   }
 
-  /// Migraciones incrementales.
+  /// Migraciones incrementales, definidas en [DatabaseSchema.migrations].
   ///
-  /// Se deja el esqueleto listo (y no un `throw`) para que la versión 2 sea
-  /// añadir un `case` sin tocar nada mas. Cada paso debe ser idempotente y no
-  /// destruir datos: esta base no tiene copia en ningún servidor.
+  /// Van en una transacción por versión: si un paso falla, esa versión entera
+  /// se deshace y la base se queda en la anterior, que sigue siendo legible.
+  /// Ningún paso destruye datos: esta base no tiene copia en ningún servidor.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     for (int v = oldVersion + 1; v <= newVersion; v++) {
-      switch (v) {
-        // case 2:
-        //   await db.execute('ALTER TABLE "transactions" ADD COLUMN tag TEXT');
-        //   break;
-        default:
-          break;
-      }
+      final List<String> steps =
+          DatabaseSchema.migrations[v] ?? const <String>[];
+      await db.transaction((Transaction txn) async {
+        for (final String statement in steps) {
+          await txn.execute(statement);
+        }
+      });
     }
   }
 
