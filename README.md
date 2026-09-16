@@ -97,7 +97,7 @@ when fetching the script"*.
 | Momento | Peso |
 |---|---|
 | Hasta poder usar la app | ~10 MB (motor, código y fuentes latinas) |
-| A los 3 s, en segundo plano | 8 MB de la fuente china |
+| Solo si hay texto en chino | 8 MB de la fuente china |
 
 Vercel comprime con brotli, así que en la práctica es bastante menos. A partir
 de la segunda visita no se descarga nada: lo sirve el service worker.
@@ -179,7 +179,7 @@ comprueba que cubran el repertorio que la app usa.
 La interfaz está en español, pero se puede **escribir en chino** en cualquier
 campo: el nombre de una categoría, el concepto de un gasto, una nota.
 
-Esto no sale gratis. Roboto no tiene un solo glifo chino, y normalmente el
+Esto no sale gratis. Archivo no tiene un solo glifo chino, y normalmente el
 motor de Flutter lo resolvería descargando una fuente de reserva de
 `fonts.gstatic.com` — que es justo lo que la política de seguridad prohíbe. Sin
 una fuente empaquetada, el texto se guardaría bien pero se vería como
@@ -187,13 +187,17 @@ rectángulos vacíos.
 
 Por eso va **Noto Sans SC** dentro de la app (8,3 MB, cobertura completa). No
 se declara en la sección `fonts:` del pubspec, porque eso la descargaría al
-arrancar incluso para quien solo escribe en español: se carga sola en segundo
-plano después del primer frame, y Flutter rehace el layout cuando llega.
+arrancar incluso para quien solo escribe en español. Tampoco se pide "por si
+acaso": en web CanvasKit procesa la fuente en el hilo principal y la app se
+congelaba un momento justo al empezar a usarla. Se carga **solo cuando hace
+falta**: al abrir la bóveda si algún texto guardado tiene caracteres chinos, o
+al teclear el primero en un nombre, concepto o nota. Flutter rehace el layout
+cuando llega.
 
 ---|---|
 | Ingreso vs gasto | Signo `+` / `−` y peso tipográfico |
 | Presupuesto rebasado | **Trama diagonal** en la barra |
-| Categorías | Seis tonos separados ≥1,38:1, con distintivo invertido |
+| Categorías | 16 colores a elegir; el icono va en tinta o papel, el que más contraste dé (≥3,7:1) |
 | Estado de la mascota | Intensidad del halo, y el texto que lo acompaña |
 | Series del gráfico | Punto **relleno** vs **contorno** en la leyenda |
 
@@ -337,11 +341,19 @@ propias (mover dinero de un sitio a otro no crea ni destruye patrimonio).
 
 ### Presupuestos que no hay que recrear cada día 1
 
-Un mismo modelo cubre los cuatro casos, combinando dos campos:
+Un mismo modelo cubre todos los casos, combinando tres campos:
 
-- `category_id` nulo → presupuesto **global** del mes; con valor → **por categoría**.
+- `category_ids` vacío → **total** del mes; con valores → **límite** para esas
+  categorías juntas ("Ocio: cine, bares y conciertos").
+- `name` opcional: sin él, la tarjeta se titula con sus categorías.
 - `month_key` con valor (`'2026-08'`) → solo ese mes; nulo → **plantilla** que
   se aplica a todos los meses que no tengan uno propio.
+
+Las reglas viven en `BudgetPlanner`, el mismo para los dos backends: un
+límite puntual sustituye a la plantilla con la que comparta alguna categoría,
+solo hay un total por mes, y una categoría no puede estar en dos límites a la
+vez (su gasto contaría dos veces y el reparto del mes no cuadraría). La
+pantalla enseña arriba cuánto queda libre del total para límites nuevos.
 
 ---
 
@@ -376,13 +388,15 @@ despacio ya dice que la cosa aprieta.
 flutter test
 ```
 
-124 pruebas cubren lo que más duele si se rompe:
+146 pruebas cubren lo que más duele si se rompe:
 
 - **`money_test.dart`** — parseo de importes con coma y punto, y que la suma en
   céntimos no acumule error.
 - **`date_range_test.dart`** — intervalos semiabiertos, semana que empieza en
   lunes, cambios de año.
 - **`recurrence_test.dart`** — el día 31 en meses de 30, febrero bisiesto.
+- **`budget_planner_test.dart`** — qué límite manda cada mes, qué suma cada uno,
+  conflictos entre límites y lectura de copias con el formato antiguo.
 - **`mascot_state_test.dart`** — que la alerta salte al cruzar el 90 % y **no**
   se repita en cada refresco.
 - **`web_vault_test.dart`** — cifrado, contraseña incorrecta, persistencia entre
@@ -397,11 +411,14 @@ flutter test
 - **`face_id_flow_test.dart`** — activar Face ID desde Ajustes, abrir con él y
   qué pasa al cancelarlo, con un doble del Secure Enclave.
 - **`chinese_input_test.dart`** — que el chino se teclee, se cifre, se guarde y
-  vuelva intacto, y que la fuente esté empaquetada.
+  vuelva intacto, que la fuente esté empaquetada y que solo se cargue cuando
+  hay texto que la necesita.
 - **`performance_test.dart`** — que la mascota deje de animar cuando nadie la
   mira, y que los formateadores se reutilicen.
 - **`fonts_test.dart`** — la regla de reparto entre la caligráfica y el cuerpo.
-- **`goldens_test.dart`** — capturas de referencia de la interfaz.
+- **`goldens_test.dart`** — capturas de referencia de la interfaz, con el reloj
+  fijado (`AppClock`): enseñan el mes en curso y "Hoy"/"Ayer", y con el reloj
+  real caducaban solas al cambiar de mes.
 
 Para regenerar las capturas tras un cambio de diseño:
 
