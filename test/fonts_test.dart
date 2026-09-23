@@ -42,6 +42,60 @@ void main() {
       }
     });
 
+    test('todos los estilos que reparte el tema llevan familia', () {
+      // `ThemeData.fontFamily` solo se aplica a `theme.textTheme`: los estilos
+      // que se pasan a mano a los temas de componentes se quedaban sin
+      // familia y dependían de la fuente por defecto de cada plataforma. En
+      // la web, además, el motor no tenía contra qué comprobar la «ó» de
+      // «Crear bóveda», la daba por ausente y pedía una Noto a gstatic.
+      final ThemeData theme = AppTheme.light();
+      final TextTheme t = theme.textTheme;
+      final Map<String, TextStyle?> estilos = <String, TextStyle?>{
+        'filledButton':
+            theme.filledButtonTheme.style?.textStyle?.resolve(<WidgetState>{}),
+        'floatingActionButton':
+            theme.floatingActionButtonTheme.extendedTextStyle,
+        'snackBar': theme.snackBarTheme.contentTextStyle,
+        'appBar': theme.appBarTheme.titleTextStyle,
+        'displayLarge': t.displayLarge,
+        'displayMedium': t.displayMedium,
+        'displaySmall': t.displaySmall,
+        'headlineLarge': t.headlineLarge,
+        'headlineMedium': t.headlineMedium,
+        'headlineSmall': t.headlineSmall,
+        'titleLarge': t.titleLarge,
+        'titleMedium': t.titleMedium,
+        'titleSmall': t.titleSmall,
+        'bodyLarge': t.bodyLarge,
+        'bodyMedium': t.bodyMedium,
+        'bodySmall': t.bodySmall,
+        'labelLarge': t.labelLarge,
+        'labelMedium': t.labelMedium,
+        'labelSmall': t.labelSmall,
+      };
+      for (final MapEntry<String, TextStyle?> e in estilos.entries) {
+        expect(e.value?.fontFamily, AppTheme.bodyFont, reason: e.key);
+        expect(e.value?.fontFamilyFallback, AppTheme.bodyFallback,
+            reason: e.key);
+      }
+    });
+
+    test('la web no pide nada fuera de su origen al arrancar', () {
+      // Configuración del motor en la plantilla de arranque: CanvasKit y las
+      // fuentes de reserva salen del propio build, nunca de gstatic.com. Y el
+      // service worker propio se registra ahí: `flutter.js` ya no lo hace en
+      // una instalación nueva.
+      final String bootstrap =
+          File('web/flutter_bootstrap.js').readAsStringSync();
+      expect(bootstrap, contains('canvasKitBaseUrl: "canvaskit/"'));
+      expect(bootstrap, contains('fontFallbackBaseUrl: "fuentes-reserva/"'));
+      expect(bootstrap,
+          contains('serviceWorker.register("flutter_service_worker.js")'));
+      // Rutas relativas al build: ninguna URL absoluta.
+      expect(bootstrap, isNot(contains('https://')));
+      expect(bootstrap, isNot(contains('http://')));
+    });
+
     test('los ficheros de fuente están en el proyecto', () {
       for (final String path in <String>[
         'assets/fonts/Archivo-Regular.ttf',
@@ -49,6 +103,7 @@ void main() {
         'assets/fonts/Archivo-Bold.ttf',
         'assets/fonts/PinyonScript-Regular.ttf',
         'assets/fonts/NotoSansSC-Regular.otf',
+        'assets/fonts/web/NotoSansSymbols-Reserva.woff2',
       ]) {
         expect(File(path).existsSync(), isTrue, reason: path);
       }

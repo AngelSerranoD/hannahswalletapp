@@ -15,6 +15,13 @@ igual de bien mientras haya cobertura. Por eso el script no se limita a
 compilar, sino que revisa el resultado y falla si encuentra referencias
 externas.
 
+Ademas anade lo que `flutter build web` no hace: el service worker propio (sin
+el, la PWA no abre sin conexion) y la fuente de reserva en `fuentes-reserva/`.
+Y para que equivocarse sea dificil, el service worker lleva una marca
+(`BUILD_MARK`) que busca `web/comprobar-build.cjs`, el `buildCommand` de
+`web/vercel.json`: una build hecha con `flutter build web` a secas no se puede
+desplegar en Vercel.
+
 Uso:
     python tool/build_pwa.py                 # despliegue en la raiz del dominio
     python tool/build_pwa.py /hannahswallet/ # despliegue en un subdirectorio
@@ -24,6 +31,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -39,15 +47,36 @@ FORBIDDEN = (
 # Se revisan los ficheros de arranque, no `main.dart.js`.
 #
 # `main.dart.js` SIEMPRE contendra la cadena "fonts.gstatic.com": es el valor
-# por defecto de `fontFallbackBaseUrl`, de donde el motor descargaria una
-# fuente Noto si apareciera un caracter que Roboto no cubre (emoji, chino,
-# arabe...). No es una conexion que la app haga: es una que HARIA en ese caso
-# concreto, y la CSP la bloquea.
+# por defecto de `fontFallbackBaseUrl`. Aqui no se usa: la plantilla
+# `web/flutter_bootstrap.js` lo apunta a `fuentes-reserva/`, en el propio
+# origen, y este script deja alli la Noto que el motor pide (ver
+# `install_fallback_font`).
 #
 # Consecuencia asumida: un emoji en la nota de un gasto se vera como un
-# rectangulo. Es el precio de no abrir ni una sola conexion a un tercero, y
-# para una app de cuentas en espanol compensa.
+# rectangulo (el motor pediria Noto Color Emoji a `fuentes-reserva/`, que no la
+# tiene). Es el precio de no abrir ni una sola conexion a un tercero, y para
+# una app de cuentas en espanol compensa.
 CHECK_FILES = ('index.html', 'flutter.js', 'flutter_bootstrap.js')
+
+# Fuente de reserva que el motor pide a `fontFallbackBaseUrl`.
+#
+# El motor la elige cuando un texto no tiene una familia registrada: da por
+# ausente cualquier tilde o enie y, en el desempate entre las Noto que la
+# cubren, gana Noto Sans Symbols. Se genera recortada (5 KB) con
+# `python tool/prepare_fonts.py --reserva-web`.
+FALLBACK_DIR = 'fuentes-reserva'
+FALLBACK_SOURCE = os.path.join('assets', 'fonts', 'web',
+                               'NotoSansSymbols-Reserva.woff2')
+# La ruta exacta la dicta la version del motor ("notosanssymbols/v43/<id>.woff2")
+# y cambia al actualizar Flutter: se lee de `main.dart.js` en cada build en vez
+# de escribirla aqui.
+FALLBACK_URL = re.compile(r'notosanssymbols/v\d+/[A-Za-z0-9_-]+\.woff2')
+
+# Marca que el service worker propio lleva y el de Flutter no. La busca
+# `web/comprobar-build.cjs`, que es el `buildCommand` de `web/vercel.json`: sin
+# ella, Vercel rechaza el despliegue.
+BUILD_MARK = 'hecho-con: tool/build_pwa.py'
+BUILD_CHECKER = 'comprobar-build.cjs'
 
 
 def run(cmd):
@@ -97,6 +126,7 @@ NO_PRECACHE = (
     'vercel.json',
     '_headers',
     'NOTICES',
+    BUILD_CHECKER,       # lo ejecuta Vercel al desplegar; ningun navegador
 )
 
 # `canvaskit/` son 28 MB con TODOS los renderers, y cada navegador usa uno
@@ -107,6 +137,29 @@ NO_PRECACHE_DIRS = ('canvaskit/',)
 
 # La fuente china son 8 MB que solo necesita quien escriba en chino.
 NO_PRECACHE_NAMES = ('NotoSansSC-Regular.otf',)
+
+
+def install_fallback_font(build_dir):
+    """Deja la Noto recortada donde el motor la va a pedir.
+
+    Devuelve un mensaje de error o None.
+    """
+    main_js = os.path.join(build_dir, 'main.dart.js')
+    with open(main_js, encoding='utf-8', errors='ignore') as handle:
+        found = FALLBACK_URL.search(handle.read())
+    if not found:
+        return ('main.dart.js ya no nombra Noto Sans Symbols: el motor ha '
+                'cambiado su lista de fuentes de reserva. Revisa cual pide '
+                'ahora (consola del navegador) y adapta FALLBACK_URL.')
+    if not os.path.exists(FALLBACK_SOURCE):
+        return (f'Falta {FALLBACK_SOURCE}. Generala con: '
+                'python tool/prepare_fonts.py --reserva-web')
+    target = os.path.join(build_dir, FALLBACK_DIR, *found.group(0).split('/'))
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    shutil.copyfile(FALLBACK_SOURCE, target)
+    print(f'Fuente de reserva en {FALLBACK_DIR}/{found.group(0)} '
+          f'({os.path.getsize(target) // 1024} KB)')
+    return None
 
 
 def install_service_worker(build_dir):
@@ -173,6 +226,19 @@ def verify(build_dir):
         )
     if not os.path.exists(os.path.join(build_dir, 'canvaskit', 'canvaskit.wasm')):
         problems.append('Falta canvaskit/ en el build.')
+    # La plantilla web/flutter_bootstrap.js fija de donde saca el motor
+    # CanvasKit y las fuentes de reserva. Si alguien la borra, Flutter vuelve
+    # a la suya y las fuentes se pedirian a fonts.gstatic.com.
+    for needed in ('canvasKitBaseUrl: "canvaskit/"',
+                   f'fontFallbackBaseUrl: "{FALLBACK_DIR}/"',
+                   'serviceWorker.register("flutter_service_worker.js")'):
+        if needed not in content:
+            problems.append(f'flutter_bootstrap.js no lleva {needed}: '
+                            'falta la plantilla web/flutter_bootstrap.js.')
+    fallback = os.path.join(build_dir, FALLBACK_DIR)
+    if not any(name.endswith('.woff2')
+               for _, _, files in os.walk(fallback) for name in files):
+        problems.append(f'No hay fuente de reserva en {FALLBACK_DIR}/.')
 
     # 2. La fuente tiene que viajar dentro.
     fonts_dir = os.path.join(build_dir, 'assets', 'assets', 'fonts')
@@ -203,9 +269,19 @@ def verify(build_dir):
     else:
         with open(vercel, encoding='utf-8') as handle:
             conf = handle.read()
-        for needed in ("connect-src 'self'", 'frame-ancestors', 'nosniff'):
+        for needed in ("connect-src 'self'", 'frame-ancestors', 'nosniff',
+                       f'"buildCommand": "node {BUILD_CHECKER}"'):
             if needed not in conf:
                 problems.append(f'vercel.json ha perdido {needed}.')
+    checker = os.path.join(build_dir, BUILD_CHECKER)
+    if not os.path.exists(checker):
+        problems.append(f'Falta {BUILD_CHECKER} en el build: Vercel no podria '
+                        'comprobar que la build sale de este script.')
+    else:
+        with open(checker, encoding='utf-8') as handle:
+            if BUILD_MARK not in handle.read():
+                problems.append(f'{BUILD_CHECKER} ya no busca la marca '
+                                f'"{BUILD_MARK}".')
 
     # 5. El service worker tiene que cachear de verdad.
     sw = os.path.join(build_dir, 'flutter_service_worker.js')
@@ -218,6 +294,9 @@ def verify(build_dir):
         )
     if 'caches.open' not in worker:
         problems.append('El service worker no cachea nada.')
+    if BUILD_MARK not in worker:
+        problems.append(f'El service worker no lleva la marca "{BUILD_MARK}": '
+                        'Vercel rechazaria el despliegue.')
 
     # 6. La politica de seguridad debe seguir ahi.
     index = os.path.join(build_dir, 'index.html')
@@ -248,10 +327,11 @@ def main():
     build_dir = os.path.join('build', 'web')
     prune(build_dir)
 
-    sw_error = install_service_worker(build_dir)
-    problems = verify(build_dir)
-    if sw_error:
-        problems.insert(0, sw_error)
+    # La fuente va antes que el service worker para entrar en su precache:
+    # sin conexion, el motor tambien tiene que encontrarla.
+    errors = [install_fallback_font(build_dir),
+              install_service_worker(build_dir)]
+    problems = [e for e in errors if e] + verify(build_dir)
 
     print()
     if problems:
@@ -267,7 +347,7 @@ def main():
     )
     print('Comprobaciones superadas:')
     print('  - CanvasKit local, sin descarga externa')
-    print('  - Fuentes empaquetadas')
+    print('  - Fuentes empaquetadas, y la de reserva en el propio origen')
     print('  - Sin referencias a dominios de terceros')
     print('  - CSP presente y sin scripts en linea')
     print('  - vercel.json con las cabeceras de seguridad')

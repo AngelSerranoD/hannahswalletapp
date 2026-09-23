@@ -40,6 +40,14 @@ abstract final class AppTheme {
   /// "cabe" en la fuente. Licencia SIL OFL.
   static const String titleFont = 'PinyonScript';
 
+  /// Reserva de la fuente de cuerpo: Noto Sans SC para lo que Archivo no
+  /// cubra (se carga solo si hace falta, ver [CjkFontLoader]).
+  ///
+  /// El orden importa: Flutter usa la primera fuente que tenga el glifo, así
+  /// que las tildes y los símbolos de moneda siguen saliendo de Archivo y
+  /// solo los caracteres chinos caen en la de reserva.
+  static const List<String> bodyFallback = <String>[CjkFontLoader.family];
+
   /// Devuelve [base] con la fuente caligrafica de titulo.
   static TextStyle? titleStyle(String text, TextStyle? base) =>
       base?.copyWith(fontFamily: titleFont);
@@ -68,19 +76,26 @@ abstract final class AppTheme {
       outlineVariant: AppColors.outlineSoft,
     );
 
-    final TextTheme text = _textTheme(scheme);
+    // La familia va en CADA estilo, no solo en `ThemeData.fontFamily`: esa
+    // solo se aplica a `theme.textTheme`, y los estilos que se pasan a mano a
+    // los temas de componentes (botones, FAB, snackbar, barra superior) se
+    // quedaban sin familia y dependían de la fuente por defecto de cada
+    // plataforma (en las pruebas, cajas negras). En la web, además, el motor
+    // no tenía contra qué comprobar la «ó» de «Crear bóveda», la daba por
+    // ausente y pedía Noto Sans Symbols a fonts.gstatic.com, que la CSP
+    // bloquea.
+    final TextTheme text = _textTheme(scheme).apply(
+      fontFamily: bodyFont,
+      fontFamilyFallback: bodyFallback,
+    );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: scheme,
       // Archivo para el latino y Noto Sans SC para lo que no cubra.
-      //
-      // El orden importa: Flutter usa la primera fuente que tenga el glifo, así
-      // que las tildes y los símbolos de moneda siguen saliendo de Archivo y
-      // solo los caracteres chinos caen en la de reserva.
       fontFamily: bodyFont,
-      fontFamilyFallback: const <String>[CjkFontLoader.family],
+      fontFamilyFallback: bodyFallback,
       scaffoldBackgroundColor: AppColors.background,
       textTheme: text,
       splashFactory: InkSparkle.splashFactory,

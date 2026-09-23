@@ -248,11 +248,13 @@ class _SeriesChart extends StatelessWidget {
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => AppColors.ink,
+            // Del tema y no un TextStyle suelto: fl_chart pinta el tooltip
+            // sin heredar nada, y sin familia el «€» salía en la fuente del
+            // sistema (y en la web hacía que el motor pidiera una Noto).
             getTooltipItem: (_, _, BarChartRodData rod, _) => BarTooltipItem(
               Money.format(rod.toY.round(), currencyCode: currency),
-              const TextStyle(
+              theme.textTheme.labelLarge!.copyWith(
                 color: AppColors.paper,
-                fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),

@@ -46,10 +46,11 @@ dependencias sin un solo import (`collection` y `cupertino_icons`) y los
 python tool/build_pwa.py
 ```
 
-Usa este script y no `flutter build web` a secas. Además de compilar con los
-flags correctos, **verifica el resultado y aborta si algo falla**:
+Es **el único camino**: no uses `flutter build web` a secas. Además de compilar
+con los flags correctos, **verifica el resultado y aborta si algo falla**:
 
 - CanvasKit y fuentes empaquetados, sin descargas de `gstatic.com`
+- La fuente de reserva del motor en el propio origen (ver *Las fuentes*)
 - Sin referencias a dominios de terceros
 - CSP presente y sin scripts en línea
 - `vercel.json` con las cabeceras de seguridad
@@ -57,6 +58,14 @@ flags correctos, **verifica el resultado y aborta si algo falla**:
 
 También poda los ficheros `.symbols` (7 MB de mapas de depuración que ningún
 navegador pide) y genera el service worker con la lista de recursos del build.
+
+**Si te equivocas, Vercel no lo publica.** El service worker de `build_pwa.py`
+lleva la marca `hecho-con: tool/build_pwa.py`, y el `buildCommand` de
+`web/vercel.json` (`node comprobar-build.cjs`, que viaja en `web/` y por tanto
+en toda build) la busca antes de desplegar: una build de `flutter build web` a
+secas lleva el service worker de Flutter, no la tiene, y el despliegue falla con
+el mensaje *"Esta build no sale de python tool/build_pwa.py"*. Se puede probar
+sin desplegar con `vercel build` dentro de `build/web`.
 
 ### Subirlo
 
@@ -87,10 +96,10 @@ iOS.
 python tool/serve_build.py
 ```
 
-Sirve `build/web` en `http://127.0.0.1:8099` con las mismas cabeceras que
-pondrá Vercel. No uses `python -m http.server`: responde en HTTP/1.0 y el
-navegador falla al registrar el service worker con un escueto *"unknown error
-when fetching the script"*.
+Sirve `build/web` en `http://127.0.0.1:8099` con las cabeceras que pondrá
+Vercel, leídas del propio `vercel.json` del build (CSP incluida). No uses
+`python -m http.server`: responde en HTTP/1.0 y el navegador falla al registrar
+el service worker con un escueto *"unknown error when fetching the script"*.
 
 ### Qué se descarga
 
@@ -108,7 +117,9 @@ Flutter ya no genera uno que cachee —el suyo solo se desinstala a sí mismo—
 así que la app **no arrancaría sin conexión**, que es justo lo contrario de lo
 que promete. `tool/build_pwa.py` lo sustituye por
 `tool/service_worker_template.js`, que precarga lo esencial (unos 10 MB) y
-cachea el resto según se usa. El motor de CanvasKit (28 MB con todos los
+cachea el resto según se usa. Lo registra `web/flutter_bootstrap.js`: con
+Flutter 3.41, `flutter.js` solo registra un service worker si ya había uno de
+antes, y en una instalación nueva la PWA se quedaba sin él. El motor de CanvasKit (28 MB con todos los
 renderers, de los que cada navegador usa uno) queda fuera del precache a
 propósito: se guarda solo en la primera visita, que siempre tiene conexión.
 
@@ -151,6 +162,7 @@ pantalla, así que funciona como foco, y su terracota convive con los verdes.
 | Títulos | **Pinyon Script** | SIL OFL |
 | Todo lo demás | **Archivo** | SIL OFL |
 | Chino | **Noto Sans SC** | SIL OFL |
+| Reserva del motor web | **Noto Sans Symbols** (93 caracteres) | SIL OFL |
 
 Las tres se pueden **incrustar en una app sin restricciones**. Ese fue el
 primer criterio, por delante del parecido: antes estuvieron aquí Coolvetica y
@@ -173,6 +185,30 @@ cualquier título.
 Se preparan con `python tool/prepare_fonts.py`, que las descarga, genera las
 tres instancias estáticas de Archivo (se publica como fuente variable) y
 comprueba que cubran el repertorio que la app usa.
+
+**Cada estilo del tema lleva su familia.** `ThemeData.fontFamily` solo se aplica
+a `theme.textTheme`; los estilos que se pasan a mano a botones, FAB, snackbar o
+barra superior (y los del tooltip de `fl_chart`, que no hereda nada) se quedaban
+sin ella. En la web eso tenía un efecto invisible pero feo: sin familia contra
+la que comprobar la «ó» de «Crear bóveda», el motor la daba por ausente y pedía
+**Noto Sans Symbols** a `fonts.gstatic.com`, que la CSP bloquea. Lo vigila
+`test/fonts_test.dart`.
+
+### La fuente de reserva de la web
+
+Aun así, el motor web descarga una Noto cada vez que cree que a un texto le
+falta un glifo. `web/flutter_bootstrap.js` le indica que la busque en
+`fuentes-reserva/`, en el propio origen, nunca en `gstatic.com`, y
+`tool/build_pwa.py` deja allí la que pide: **Noto Sans Symbols recortada a 93
+caracteres** (Latin-1 y la puntuación del español, 5 KB). Es justo lo que hace
+que el motor la elija: cuando da por ausente una tilde o una eñe, en el
+desempate entre las Noto que la cubren gana Noto Sans Symbols. Se genera con
+`python tool/prepare_fonts.py --reserva-web` y no se declara en el pubspec: no
+es para la app, es para el motor.
+
+Lo que no cubre: un emoji o un carácter de otro alfabeto. El motor pediría otra
+Noto a `fuentes-reserva/`, no la encontraría y el carácter saldría como un
+rectángulo, sin haber salido a la red.
 
 ## Escribir en chino
 
@@ -239,21 +275,17 @@ se pinta en blanco o tinta, el que contraste. Con el planteamiento anterior
 python tool/build_pwa.py
 ```
 
-Usa este script y no `flutter build web` a secas. Compila con los flags
-correctos y **comprueba el resultado**: que el motor y las fuentes viajen
-dentro, que no queden referencias a dominios de terceros y que la política de
-seguridad siga en su sitio. Si algo de eso falla, aborta.
+Es el mismo y único camino de *Compilar y desplegar en Vercel*: compila con los
+flags correctos y **comprueba el resultado** (motor y fuentes dentro, ninguna
+referencia a dominios de terceros, la política de seguridad en su sitio). Si
+algo de eso falla, aborta.
 
 El resultado queda en `build/web/`. Sírvelo por **HTTPS** (obligatorio: sin él
 iOS no instala la app ni deja usar IndexedDB) y ábrelo en Safari.
 
-Para probarlo en local antes de subirlo:
-
-```bash
-cd build/web && python -m http.server 8099
-```
-
-`http://127.0.0.1:8099` funciona porque `localhost` cuenta como contexto seguro.
+Para probarlo en local antes de subirlo, `python tool/serve_build.py` (ver
+*Probarlo antes en local*). `http://127.0.0.1:8099` funciona porque `localhost`
+cuenta como contexto seguro.
 
 **Activa la compresión en tu hosting** (gzip o brotli). La primera carga son unos
 11 MB sin comprimir —el motor de Flutter más el código de la app—, que con brotli

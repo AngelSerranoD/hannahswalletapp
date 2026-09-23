@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "buildCommand": "node comprobar-build.cjs",
+  "outputDirectory": ".",
   "trailingSlash": false,
   "headers": [
     {

@@ -2,6 +2,11 @@
 
 // Service worker de Hannah's Wallet.
 //
+// hecho-con: tool/build_pwa.py
+// (Esa linea es la marca que busca `web/comprobar-build.cjs`, el `buildCommand`
+// de `web/vercel.json`: el service worker de Flutter no la lleva, asi que una
+// build hecha sin `tool/build_pwa.py` no se puede desplegar. No la quites.)
+//
 // POR QUE ES PROPIO Y NO EL DE FLUTTER
 //
 // Las versiones recientes de Flutter generan un `flutter_service_worker.js`
@@ -11,9 +16,9 @@
 // metro dejaria una pantalla en blanco: los datos estan en el dispositivo,
 // pero el codigo que los lee habria que descargarlo.
 //
-// Este fichero lo sustituye en el build (ver `tool/build_pwa.py`), asi que se
-// registra por el mismo camino que el original y no hace falta tocar el
-// arranque.
+// Este fichero lo sustituye en el build (ver `tool/build_pwa.py`) con el mismo
+// nombre. Lo registra `web/flutter_bootstrap.js`: el arranque de Flutter ya no
+// registra ninguno en una instalacion nueva.
 //
 // ESTRATEGIA
 //

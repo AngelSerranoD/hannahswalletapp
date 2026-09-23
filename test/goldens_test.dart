@@ -75,37 +75,12 @@ void main() {
       ..devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
 
-    // `flutter_test` usa por defecto una fuente que dibuja rectangulos negros.
-    //
-    // Las familias de la app ya vienen del tema; lo que hay que repasar son
-    // las copias que `AppTheme` hace de algunos estilos (titulo de la barra,
-    // boton flotante, snackbar), porque conservan la fuente que tenian al
-    // copiarse y saldrian como cajas negras.
-    final ThemeData base = AppTheme.light();
-
-    TextStyle? roboto(TextStyle? style) =>
-        style?.copyWith(fontFamily: style.fontFamily ?? AppTheme.bodyFont);
-
-    final ThemeData themed = base.copyWith(
-      appBarTheme: base.appBarTheme.copyWith(
-        titleTextStyle: roboto(base.appBarTheme.titleTextStyle),
-      ),
-      floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
-        extendedTextStyle: roboto(
-          base.floatingActionButtonTheme.extendedTextStyle,
-        ),
-      ),
-      snackBarTheme: base.snackBarTheme.copyWith(
-        contentTextStyle: roboto(base.snackBarTheme.contentTextStyle),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: base.filledButtonTheme.style?.copyWith(
-          textStyle: WidgetStatePropertyAll<TextStyle?>(
-            roboto(base.textTheme.labelLarge),
-          ),
-        ),
-      ),
-    );
+    // `flutter_test` dibuja como rectangulos negros el texto sin familia. Aqui
+    // antes se rellenaba a mano la familia de los estilos que el tema pasa a
+    // botones, FAB, snackbar y barra superior, porque salian sin ella. Ahora
+    // la lleva el propio tema (`AppTheme.light`), y las capturas usan el tema
+    // tal cual: si un estilo vuelve a quedarse sin familia, se vera aqui.
+    final ThemeData themed = AppTheme.light();
 
     await tester.pumpWidget(
       ProviderScope(
